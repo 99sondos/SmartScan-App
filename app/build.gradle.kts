@@ -69,4 +69,16 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // CameraX
+    implementation("androidx.camera:camera-core:1.4.0")
+    implementation("androidx.camera:camera-camera2:1.4.0")
+    implementation("androidx.camera:camera-lifecycle:1.4.0")
+    implementation("androidx.camera:camera-view:1.4.0")
+
+    // Compose Activity integration
+    implementation("androidx.activity:activity-compose:1.9.3")
+
+    //  lifecycle
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 }
