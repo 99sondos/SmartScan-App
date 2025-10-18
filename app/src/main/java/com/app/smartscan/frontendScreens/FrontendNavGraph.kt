@@ -13,9 +13,10 @@ fun FrontendNavGraph() {
 
     NavHost(navController = navController, startDestination = "questionnaire") {
         composable("questionnaire") {
-            QuestionnaireScreen(onFinish = {
-                navController.navigate("main")
-            })
+            QuestionnaireScreen(
+                onFinish = { navController.navigate("main") },
+                // onBack = { navController.popBackStack() }
+            )
         }
         composable("main") {
             MainScreen()
