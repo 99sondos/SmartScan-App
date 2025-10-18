@@ -228,6 +228,11 @@ fun AllergyQuestion(
     // Remember which option was selected + the custom input
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var customAllergy by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) } // To show red text for invalid input
+
+    // Simple validation: at least 3 letters, no numbers or symbols
+    val isValidAllergy = customAllergy.length >= 3 &&
+            customAllergy.all { it.isLetter() || it.isWhitespace() }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -262,7 +267,10 @@ fun AllergyQuestion(
 
             options.forEach { option ->
                 OutlinedButton(
-                    onClick = { selectedOption = option },
+                    onClick = {
+                        selectedOption = option
+                        showError = false // reset any previous error
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp),
@@ -282,18 +290,40 @@ fun AllergyQuestion(
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = customAllergy,
-                    onValueChange = { customAllergy = it },
+                    onValueChange = {
+                        customAllergy = it
+                        showError = false // hide warning while typing
+                    },
                     label = { Text("Please specify your allergy") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = !isValidAllergy && customAllergy.isNotBlank()
                 )
+
+                // Show red warning if invalid
+                if (!isValidAllergy && customAllergy.isNotBlank()) {
+                    Text(
+                        text = "Please enter a valid allergy name (letters only, minimum 3 letters)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+
+                // TODO: Verify allergy name on backend later for accuracy (spell check, known allergens)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Continue button — only active when user selected something valid
+            // Continue button — only active when valid input or normal selection
             Button(
-                onClick = { onNext() },
+                onClick = {
+                    if (selectedOption == "Other" && !isValidAllergy) {
+                        showError = true
+                    } else {
+                        onNext()
+                    }
+                },
                 enabled = selectedOption != null &&
                         (selectedOption != "Other" || customAllergy.isNotBlank())
             ) {
