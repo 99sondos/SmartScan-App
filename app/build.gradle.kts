@@ -86,6 +86,11 @@ dependencies {
     // Required to read EXIF orientation metadata for captured images
     implementation("androidx.exifinterface:exifinterface:1.3.6")
 
+    // Enables access to extended Material icons (Camera, Image, Check, Refresh, etc.)
+    //implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-extended")
+
+
 
 
 }
