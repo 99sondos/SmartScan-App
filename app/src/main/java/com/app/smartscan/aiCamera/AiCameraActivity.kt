@@ -8,8 +8,8 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -36,20 +36,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import java.io.File
-import android.view.WindowManager
-import android.view.Surface
+import androidx.exifinterface.media.ExifInterface
+
+
+
+
 
 class AiCameraActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request camera permission at runtime
+        // Request camera permission at runtime.
+        // CameraX requires explicit camera permission to function.
         if (checkSelfPermission(android.Manifest.permission.CAMERA) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 0)
         }
 
-        // Launch the Compose camera screen
+        // Set the Compose content and launch the camera preview screen.
         setContent {
             CameraPreviewScreen()
         }
@@ -59,46 +64,50 @@ class AiCameraActivity : ComponentActivity() {
 @Composable
 fun CameraPreviewScreen() {
     val context = LocalContext.current
+
+    // PreviewView is the actual camera feed surface managed by CameraX (rendered inside Compose using AndroidView)
     val previewView = remember { PreviewView(context) }
-    // Get current screen rotation to correctly orient saved image
-    val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-    val rotation = windowManager.defaultDisplay?.rotation ?: Surface.ROTATION_0
 
-    // Build ImageCapture with correct rotation
-    val imageCapture = remember {
-        ImageCapture.Builder()
-            .setTargetRotation(rotation)
-            .build()
-    }
+    // ImageCapture is responsible for capturing high-resolution still images (separate pipeline from Preview)
+    val imageCapture = remember { ImageCapture.Builder().build() }
 
-    // Holds the captured or selected image. When not null, preview UI will be shown.
+    // Holds the captured or gallery-selected bitmap.
+    // When this is non-null, the screen switches from live camera to preview mode.
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Gallery picker to load an image from storage
+    // Launcher to pick an existing image from gallery.
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
+            // Convert gallery image Uri into a Bitmap.
+            // No EXIF correction applied here — relies on gallery apps usually returning upright bitmaps.
             val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-            capturedBitmap = bitmap // Switch to preview screen
+            capturedBitmap = bitmap
 
             Toast.makeText(context, "Gallery image loaded", Toast.LENGTH_SHORT).show()
             Log.d("AiCamera", "GALLERY BITMAP READY – send to OCR next")
         }
     }
 
-    // Initialize CameraX preview
+    // Initialize CameraX only once using LaunchedEffect.
+    // Binds Preview and ImageCapture use cases to lifecycle.
     LaunchedEffect(Unit) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
+
+            // Set up Preview pipeline and connect it to PreviewView surface provider.
             val preview = androidx.camera.core.Preview.Builder().build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
+            // Select the back camera.
             val cameraSelector = androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
 
             cameraProvider.unbindAll()
+
+            // Bind both preview and image capture to the lifecycle, enabling live camera and capture functionality.
             cameraProvider.bindToLifecycle(
                 context as ComponentActivity,
                 cameraSelector,
@@ -108,20 +117,23 @@ fun CameraPreviewScreen() {
         }, ContextCompat.getMainExecutor(context))
     }
 
-    // If no image is captured, show camera UI. Else show preview screen.
+    // UI logic: if no image is captured yet, show live camera.
+    // If an image is present, show preview mode with Retake/Use options.
     if (capturedBitmap == null) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Live camera view
+
+            // Display live camera feed.
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { previewView }
             )
 
-            // Capture button
+            // Capture button triggers photo capture pipeline.
             Button(
                 onClick = {
                     captureImage(imageCapture, context) { bitmap ->
-                        capturedBitmap = bitmap // Switch to preview
+                        // When image is captured and rotated properly, assign it to state to switch view.
+                        capturedBitmap = bitmap
                     }
                 },
                 modifier = Modifier
@@ -131,7 +143,7 @@ fun CameraPreviewScreen() {
                 Text("Capture")
             }
 
-            // Gallery button
+            // Opens gallery to pick an existing image.
             Button(
                 onClick = { galleryLauncher.launch("image/*") },
                 modifier = Modifier
@@ -142,23 +154,23 @@ fun CameraPreviewScreen() {
             }
         }
     } else {
-        // Preview screen after an image is captured or selected
+        // Preview mode after image has been captured or selected.
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // Show the selected or captured image fullscreen
+            // Show the final bitmap (already EXIF-corrected if captured from camera).
             Image(
                 bitmap = capturedBitmap!!.asImageBitmap(),
                 contentDescription = "Captured Image",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop // Fill the screen like camera preview.
             )
 
-            // Use button - this is where OCR will be connected
+            // Button to proceed with the current image (this is where OCR will be triggered).
             Button(
                 onClick = {
                     Toast.makeText(context, "Sending to OCR", Toast.LENGTH_SHORT).show()
                     Log.d("AiCamera", "USER CONFIRMED IMAGE – ready for OCR next")
-                    // TODO: OCR Module example -> OcrHelper.processImage(capturedBitmap)
+                    // TODO: Pass capturedBitmap to OCR handler here.
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -167,11 +179,9 @@ fun CameraPreviewScreen() {
                 Text("Use")
             }
 
-            // Retake button - resets back to camera
+            // Reset to go back to live camera mode without using this image.
             Button(
-                onClick = {
-                    capturedBitmap = null
-                },
+                onClick = { capturedBitmap = null },
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 32.dp, bottom = 32.dp)
@@ -182,12 +192,13 @@ fun CameraPreviewScreen() {
     }
 }
 
-// Handles image capture with callback to return the Bitmap to Compose
+// Handles still image capture and returns a physically correct rotated Bitmap.
 fun captureImage(
     imageCapture: ImageCapture,
     context: Context,
     onBitmapCaptured: (Bitmap) -> Unit
 ) {
+    // Create a temporary file to store the captured JPEG image.
     val photoFile = File(
         context.cacheDir,
         "ai_capture_${System.currentTimeMillis()}.jpg"
@@ -195,10 +206,12 @@ fun captureImage(
 
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+    // Trigger ImageCapture — this runs on a separate pipeline from the Preview.
     imageCapture.takePicture(
         outputOptions,
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
+
             override fun onError(exc: ImageCaptureException) {
                 Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
                 Log.e("AiCamera", "Capture failed: ${exc.message}")
@@ -206,12 +219,33 @@ fun captureImage(
 
             override fun onImageSaved(output: ImageCapture.OutputFileResults) {
 
-                // Decode file into Bitmap
+                // Load raw pixel data from the JPEG file — EXIF is ignored here.
                 val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
 
-                // Return bitmap to Composable via callback
+                // Read EXIF orientation to know how the image SHOULD be rotated.
+                val exif = ExifInterface(photoFile.absolutePath)
+                val orientation = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+
+                // Matrix will apply **actual pixel rotation**, fixing orientation permanently.
+                val matrix = android.graphics.Matrix()
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                }
+
+                // Create a **new** Bitmap with rotated pixels.
+                // After this, the Bitmap is physically correct — EXIF no longer matters.
+                val rotatedBitmap = Bitmap.createBitmap(
+                    bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+                )
+
+                // Return the rotated bitmap back to Compose on main thread.
                 (context as ComponentActivity).runOnUiThread {
-                    onBitmapCaptured(bitmap)
+                    onBitmapCaptured(rotatedBitmap)
                 }
 
                 Toast.makeText(context, "Image captured", Toast.LENGTH_SHORT).show()
@@ -220,6 +254,8 @@ fun captureImage(
         }
     )
 }
+
+
 
 
 
