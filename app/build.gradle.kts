@@ -83,4 +83,9 @@ dependencies {
     //  lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 
+    // Required to read EXIF orientation metadata for captured images
+    implementation("androidx.exifinterface:exifinterface:1.3.6")
+
+
+
 }
