@@ -8,19 +8,25 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,15 +35,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import java.io.File
 import androidx.exifinterface.media.ExifInterface
-
+import java.io.File
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
 
 
 
@@ -119,80 +129,107 @@ fun CameraPreviewScreen() {
 
     // UI logic: if no image is captured yet, show live camera.
     // If an image is present, show preview mode with Retake/Use options.
+
     if (capturedBitmap == null) {
+        //  CAMERA MODE (Live Preview + Icon Buttons)
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // Display live camera feed.
+            //  Live camera feed using CameraX PreviewView
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { previewView }
             )
 
-            // Capture button triggers photo capture pipeline.
-            Button(
-                onClick = {
-                    captureImage(imageCapture, context) { bitmap ->
-                        // When image is captured and rotated properly, assign it to state to switch view.
-                        capturedBitmap = bitmap
-                    }
-                },
+            //  Capture button (round, transparent, centered)
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .size(80.dp) // Button size
+                    .align(Alignment.BottomCenter) // Position at bottom center
                     .padding(bottom = 32.dp)
+                    .clip(CircleShape) // Make it round
+                    .background(Color.DarkGray.copy(alpha = 0.2f)) // Slight transparent BG
+                    .border(3.dp, Color.White, CircleShape) // White circular border
+                    .clickable {
+                        // When clicked → trigger capture image
+                        captureImage(imageCapture, context) { bitmap ->
+                            capturedBitmap = bitmap
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Text("Capture")
+                Icon(
+                    imageVector = Icons.Default.Camera, // Camera icon
+                    contentDescription = "Capture",
+                    tint = Color.DarkGray,
+                    modifier = Modifier.size(36.dp)
+                )
             }
 
-            // Opens gallery to pick an existing image.
-            Button(
-                onClick = { galleryLauncher.launch("image/*") },
+            //  Gallery icon button (bottom-left corner)
+            Icon(
+                imageVector = Icons.Default.Image, // Gallery icon
+                contentDescription = "Open Gallery",
+                tint = Color.DarkGray,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.BottomStart) // Position bottom-left
                     .padding(start = 32.dp, bottom = 32.dp)
-            ) {
-                Text("Gallery")
-            }
+                    .size(32.dp)
+                    .clickable { galleryLauncher.launch("image/*") } // Open gallery
+            )
         }
     } else {
-        // Preview mode after image has been captured or selected.
-        Box(modifier = Modifier.fillMaxSize()) {
+        //  PREVIEW MODE (User selected or captured image)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black) // Add black background to avoid white screen
+        ) {
 
-            // Show the final bitmap (already EXIF-corrected if captured from camera).
+            //  Display the image fullscreen
             Image(
                 bitmap = capturedBitmap!!.asImageBitmap(),
                 contentDescription = "Captured Image",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop // Fill the screen like camera preview.
+                contentScale = ContentScale.Crop
+
             )
 
-            // Button to proceed with the current image (this is where OCR will be triggered).
-            Button(
-                onClick = {
-                    Toast.makeText(context, "Sending to OCR", Toast.LENGTH_SHORT).show()
-                    Log.d("AiCamera", "USER CONFIRMED IMAGE – ready for OCR next")
-                    // TODO: Pass capturedBitmap to OCR handler here.
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 32.dp, bottom = 32.dp)
-            ) {
-                Text("Use")
-            }
-
-            // Reset to go back to live camera mode without using this image.
-            Button(
-                onClick = { capturedBitmap = null },
+            //  Retake icon (refresh symbol) - bottom-left
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Retake",
+                tint = Color.DarkGray,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 32.dp, bottom = 32.dp)
-            ) {
-                Text("Retake")
-            }
+                    .size(40.dp)
+                    .clickable {
+                        capturedBitmap = null // Return to camera mode
+                    }
+            )
+
+            //  Use icon (checkmark symbol) - bottom-right
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Use Image",
+                tint = Color.DarkGray,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 32.dp, bottom = 32.dp)
+                    .size(40.dp)
+                    .clickable {
+                        Toast.makeText(context, "Sending to OCR", Toast.LENGTH_SHORT).show()
+                        Log.d("AiCamera", "USER CONFIRMED IMAGE – ready for OCR next")
+                        // TODO: Send capturedBitmap to OCR handler
+                    }
+            )
         }
     }
+
+
 }
 
-// Handles still image capture and returns a physically correct rotated Bitmap.
+    // Handles still image capture and returns a physically correct rotated Bitmap.
 fun captureImage(
     imageCapture: ImageCapture,
     context: Context,
