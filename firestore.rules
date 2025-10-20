@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read and write their own profile.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Products are read-only for all authenticated users.
+    match /products/{barcode} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; // TEMPORARILY RELAXED FOR SEEDING
+    }
+
+    // Users can create, read, update, and delete their own scans.
+    match /scans/{scanId} {
+      // For reads and deletes, the user must be the owner.
+      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+
+      // For creates, the incoming document's uid must match the user.
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+
+      // For updates, both the existing and incoming documents must belong to the user.
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid;
+    }
+  }
+}

@@ -9,23 +9,32 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.smartscan.ui.auth.AuthViewModel
 import com.app.smartscan.ui.theme.SmartScanTheme
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // When in debug mode, connect to the Firebase Emulator Suite.
+        if (BuildConfig.USE_EMULATORS) {
+            FirebaseFirestore.getInstance().useEmulator("10.0.2.2", 8080)
+            FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+            FirebaseFunctions.getInstance().useEmulator("10.0.2.2", 5001)
+        }
+
         setContent {
             SmartScanTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    FirestoreTestScreen(modifier = Modifier.padding(innerPadding))
+                    AuthScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -33,57 +42,70 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FirestoreTestScreen(modifier: Modifier = Modifier) {
-    val db = remember { FirebaseFirestore.getInstance() }
-    val auth = remember { FirebaseAuth.getInstance() }
-    var result by remember { mutableStateOf("Signing in…") }
-    val scope = rememberCoroutineScope()
-
-    // Sign in anonymously once so Firestore rules with request.auth != null will pass
-    LaunchedEffect(Unit) {
-        try {
-            if (auth.currentUser == null) {
-                auth.signInAnonymously().await()
-            }
-            result = "Signed in: ${auth.currentUser?.uid}"
-        } catch (e: Exception) {
-            result = "Auth error: ${e.message}"
-        }
-    }
+fun AuthScreen(modifier: Modifier = Modifier, authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)) {
+    val uiState by authViewModel.uiState.collectAsState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("Firestore connectivity test")
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = {
-            scope.launch {
-                try {
-                    val ref = db.collection("_health").document("ping")
-                    val ts = System.currentTimeMillis()
-                    // write then read back
-                    ref.set(mapOf("ts" to ts), SetOptions.merge()).await()
-                    val snap = ref.get().await()
-                    result = "OK ts=${snap.getLong("ts")}"
-                } catch (e: Exception) {
-                    result = "Error: ${e.message}"
+        if (uiState.isSignedIn) {
+            Text("Welcome!")
+            Spacer(Modifier.height(16.dp))
+            Text(uiState.message)
+            Spacer(Modifier.height(16.dp))
+
+            // Add the test button for the cloud function
+            Button(onClick = { authViewModel.onFetchProductClicked("3337872411991") }) {
+                Text("Fetch Product (Test)")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { authViewModel.onSignOutClicked() }) {
+                Text("Sign Out")
+            }
+
+        } else {
+            Text("Sign Up / Sign In")
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.email,
+                onValueChange = { authViewModel.onEmailChange(it) },
+                label = { Text("Email") },
+                singleLine = true
+            )
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.password,
+                onValueChange = { authViewModel.onPasswordChange(it) },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation()
+            )
+            Spacer(Modifier.height(16.dp))
+
+            Text(uiState.message, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { authViewModel.onSignInClicked() }) {
+                    Text("Sign In")
+                }
+                Button(onClick = { authViewModel.onSignUpClicked() }) {
+                    Text("Sign Up")
                 }
             }
-        }) {
-            Text("Test Firestore")
         }
-        Spacer(Modifier.height(8.dp))
-        Text(result)
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
-fun FirestoreTestPreview() {
+fun AuthScreenPreview() {
     SmartScanTheme {
-        FirestoreTestScreen()
+        AuthScreen()
     }
 }
