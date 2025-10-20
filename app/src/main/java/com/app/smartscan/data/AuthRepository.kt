@@ -28,15 +28,20 @@ class AuthRepository(
      *
      * @param email The user's email.
      * @param password The user's chosen password.
+     * @param fullName The user's full name.
+     * @param username The user's chosen username.
      * @return The newly created FirebaseUser.
      * @throws Exception if sign-up or profile creation fails.
      */
-    suspend fun signUp(email: String, password: String): FirebaseUser {
+    suspend fun signUp(email: String, password: String, fullName: String, username: String): FirebaseUser {
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
         val user = authResult.user ?: throw IllegalStateException("User not created")
 
         // Create the user profile document in Firestore
-        val userProfile = UserProfile() // Create a default profile
+        val userProfile = UserProfile(
+            fullName = fullName,
+            username = username
+        )
         db.collection(FsPaths.USERS).document(user.uid).set(userProfile).await()
 
         return user

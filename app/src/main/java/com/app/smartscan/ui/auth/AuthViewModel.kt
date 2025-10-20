@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.app.smartscan.data.AuthRepository
+import com.app.smartscan.data.seed.AllergySeeder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
@@ -18,6 +19,8 @@ import kotlinx.coroutines.tasks.await
  * Data class to hold the state for the authentication screen.
  */
 data class AuthUiState(
+    val fullName: String = "",
+    val username: String = "",
     val email: String = "",
     val password: String = "",
     val message: String = "",
@@ -27,7 +30,11 @@ data class AuthUiState(
 /**
  * ViewModel for the authentication screen.
  */
-class AuthViewModel(private val repository: AuthRepository, private val functions: FirebaseFunctions) : ViewModel() {
+class AuthViewModel(
+    private val repository: AuthRepository,
+    private val functions: FirebaseFunctions,
+    private val db: FirebaseFirestore
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
@@ -36,6 +43,14 @@ class AuthViewModel(private val repository: AuthRepository, private val function
         // Check the initial sign-in state
         val currentUser = repository.currentUser
         _uiState.update { it.copy(isSignedIn = currentUser != null, message = if(currentUser != null) "Signed in as ${currentUser.email}" else "Signed out") }
+    }
+
+    fun onFullNameChange(fullName: String) {
+        _uiState.update { it.copy(fullName = fullName) }
+    }
+
+    fun onUsernameChange(username: String) {
+        _uiState.update { it.copy(username = username) }
     }
 
     fun onEmailChange(email: String) {
@@ -49,7 +64,12 @@ class AuthViewModel(private val repository: AuthRepository, private val function
     fun onSignUpClicked() {
         viewModelScope.launch {
             try {
-                val user = repository.signUp(_uiState.value.email, _uiState.value.password)
+                val user = repository.signUp(
+                    _uiState.value.email,
+                    _uiState.value.password,
+                    _uiState.value.fullName,
+                    _uiState.value.username
+                )
                 _uiState.update {
                     it.copy(
                         message = "Sign up successful: ${user.email}",
@@ -99,6 +119,18 @@ class AuthViewModel(private val repository: AuthRepository, private val function
         }
     }
 
+    fun onSeedAllergiesClicked() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(message = "Seeding allergies...") }
+                AllergySeeder.seed(db)
+                _uiState.update { it.copy(message = "Allergies seeded successfully!") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error seeding allergies: ${e.message}") }
+            }
+        }
+    }
+
     // Factory to create the ViewModel with its dependencies
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
@@ -109,7 +141,7 @@ class AuthViewModel(private val repository: AuthRepository, private val function
                 val db = FirebaseFirestore.getInstance()
                 val functions = FirebaseFunctions.getInstance()
                 val repository = AuthRepository(auth, db)
-                return AuthViewModel(repository, functions) as T
+                return AuthViewModel(repository, functions, db) as T
             }
         }
     }

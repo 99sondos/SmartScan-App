@@ -66,8 +66,24 @@ fun AuthScreen(modifier: Modifier = Modifier, authViewModel: AuthViewModel = vie
             }
 
         } else {
-            Text("Sign Up / Sign In")
+            Text("Create Your Account")
             Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.fullName,
+                onValueChange = { authViewModel.onFullNameChange(it) },
+                label = { Text("Full Name") },
+                singleLine = true
+            )
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = uiState.username,
+                onValueChange = { authViewModel.onUsernameChange(it) },
+                label = { Text("Username") },
+                singleLine = true
+            )
+            Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = uiState.email,

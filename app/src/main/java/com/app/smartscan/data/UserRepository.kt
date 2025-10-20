@@ -33,4 +33,30 @@ class UserRepository(private val db: FirebaseFirestore) {
     suspend fun upsertUser(uid: String, userProfile: UserProfile) {
         db.collection(FsPaths.USERS).document(uid).set(userProfile, SetOptions.merge()).await()
     }
+
+    /**
+     * Updates a user's profile with the answers from the initial questionnaire.
+     * This uses SetOptions.merge() to safely update the existing profile.
+     *
+     * @param uid The user's unique ID.
+     * @param skinType The user's selected skin type.
+     * @param isSensitive Whether the user's skin is sensitive.
+     * @param ageRange The user's selected age range.
+     * @param allergies A list of user's allergies.
+     */
+    suspend fun updateUserQuestionnaire(
+        uid: String,
+        skinType: String,
+        isSensitive: Boolean,
+        ageRange: String,
+        allergies: List<String>
+    ) {
+        val questionnaireData = UserProfile(
+            skinType = skinType,
+            isSensitive = isSensitive,
+            ageRange = ageRange,
+            allergies = allergies
+        )
+        db.collection(FsPaths.USERS).document(uid).set(questionnaireData, SetOptions.merge()).await()
+    }
 }
