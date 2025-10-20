@@ -3,6 +3,7 @@ package com.app.smartscan.ocr
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.app.smartscan.R
 import com.google.mlkit.vision.common.InputImage
@@ -11,63 +12,60 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.tasks.await
 
 /**
- * 🔹 OCR Helper – Nora
+ * OCR Helper – Nora
  *
- * This file handles text recognition (OCR) using Google ML Kit.
- * For now, it runs on a static test image from `drawable` (test_label1),
- * but will later be replaced with dynamic input from the camera.
+ * Handles text recognition (OCR) using Google ML Kit.
+ * It can run on either:
+ *  - A static test image (for testing)
+ *  - A live image or gallery import (URI or Bitmap)
  */
+class OcrHelper(private val context: Context) {
 
-/**
- * Runs OCR (text recognition) on a test image stored in drawable.
- * Used only for *local testing* right now.
- *
- * TODO: Replace `R.drawable.test_label1` with live image input from CameraX
- * once the camera functionality is fully integrated.
- */
-suspend fun runOcrOnTestImage(context: Context): String {
-    return try {
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-        // ⚠️ TEMPORARY: Static image used for testing
-        val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_label1)
-        val image = InputImage.fromBitmap(bitmap, 0)
-
-        // Process image using ML Kit
-        val result = recognizer.process(image).await()
-
-        // Return recognized text or fallback message
-        result.text.ifBlank { "No text detected in the image." }
-
-    } catch (e: Exception) {
-        Log.e("OCR", "Error during text recognition", e)
-        "Error: ${e.message}"
+    /**
+     * Runs OCR (text recognition) directly on a Bitmap.
+     * Used when the user takes a picture or selects one from the gallery.
+     */
+    suspend fun analyze(bitmap: Bitmap): String {
+        return try {
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val result = recognizer.process(image).await()
+            result.text.ifBlank { "No text detected in the image." }
+        } catch (e: Exception) {
+            Log.e("OCR", "Error during text recognition (bitmap)", e)
+            "Error: ${e.message}"
+        }
     }
-}
 
-/**
- * Runs OCR (text recognition) on an image selected or taken by the user.
- *
- *  This function will be used once CameraX or gallery import is connected.
- *
- * @param context Context from the activity or composable
- * @param imageUri The URI of the image to analyze
- * @return Recognized text or an error message
- */
-suspend fun runOcrOnImageUri(context: Context, imageUri: Uri): String {
-    return try {
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    /**
+     * Runs OCR on an image from a URI (used for gallery selections).
+     */
+    suspend fun analyzeUri(imageUri: Uri): String {
+        return try {
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            val image = InputImage.fromFilePath(context, imageUri)
+            val result = recognizer.process(image).await()
+            result.text.ifBlank { "No text detected in the image." }
+        } catch (e: Exception) {
+            Log.e("OCR", "Error during text recognition (uri)", e)
+            "Error: ${e.message}"
+        }
+    }
 
-        // 🔄 Converts selected or captured image into ML Kit format
-        val image = InputImage.fromFilePath(context, imageUri)
-
-        val result = recognizer.process(image).await()
-
-        // Return recognized text or fallback message
-        result.text.ifBlank { "No text detected in the image." }
-
-    } catch (e: Exception) {
-        Log.e("OCR", "Error during text recognition", e)
-        "Error: ${e.message}"
+    /**
+     * Temporary test function.
+     * Runs OCR on a static drawable resource for local testing only.
+     */
+    suspend fun runOcrOnTestImage(): String {
+        return try {
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_label1)
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val result = recognizer.process(image).await()
+            result.text.ifBlank { "No text detected in the test image." }
+        } catch (e: Exception) {
+            Log.e("OCR", "Error during text recognition (test image)", e)
+            "Error: ${e.message}"
+        }
     }
 }

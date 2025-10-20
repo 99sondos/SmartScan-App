@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -21,7 +23,21 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Load OpenAI key from gradle.properties
+        val openAiKey = project.findProperty("OPENAI_API_KEY") as String? ?: "test-key"
+        buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
     }
+    sourceSets {
+        getByName("main").java.srcDirs(
+            "src/main/java",
+            "src/main/kotlin",
+            "src/main/kotlin+java"
+        )
+    }
+
+
+
 
     buildTypes {
         release {
@@ -37,10 +53,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions { jvmTarget = "11" }
 
-    buildFeatures { compose = true }
-    // No composeOptions: kotlin 2.0 + compose plugin provides the compiler
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true // enables custom BuildConfig fields like your OpenAI key
+    }
 }
 
 dependencies {
@@ -51,7 +72,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx:25.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // 🔹 AndroidX / Compose (via version catalog)
+    // 🔹 AndroidX / Compose
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -74,15 +95,20 @@ dependencies {
     // 🔹 Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 
-    // 🔹 EXIF (for image rotation metadata)
+    // 🔹 EXIF (image rotation metadata)
     implementation("androidx.exifinterface:exifinterface:1.3.6")
 
     // 🔹 Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended")
 
-    // 🔹 ML Kit (your OCR + Barcode)
+    // 🔹 ML Kit (OCR + Barcode + Face Detection)
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mlkit:face-detection:16.1.6")
+
+    // 🔹 OpenAI via OkHttp
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // 🔹 Testing
     testImplementation(libs.junit)
@@ -93,3 +119,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+
