@@ -1,0 +1,25 @@
+[
+  {
+    "id": "skinType",
+    "question": "Select your skin type",
+    "type": "choice",
+    "options": ["Dry", "Oily", "Combination", "Normal"]
+  },
+  {
+    "id": "sensitive",
+    "question": "Is your skin sensitive?",
+    "type": "choice",
+    "options": ["Yes", "No"]
+  },
+  {
+    "id": "allergies",
+    "question": "Any allergies?",
+    "type": "allergy"
+  },
+  {
+    "id": "ageRange",
+    "question": "Select your age range",
+    "type": "choice",
+    "options": ["<18", "18–25", "26–40", "40+"]
+  }
+]
