@@ -1,6 +1,5 @@
 package com.app.smartscan.frontendScreens
 
-// --- Import all necessary Compose and Android libraries ---
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,22 +15,20 @@ import com.app.smartscan.R
 // Main composable for showing all the questions one by one
 @Composable
 fun QuestionnaireScreen(
-    onFinish: () -> Unit   // Called when user finishes or skips the last question
+    onFinish: (Boolean) -> Unit   // true = all answered, false = skipped any
 ) {
-    // List of all the questions in order
     val questions = listOf("skinType", "sensitive", "allergies", "ageRange")
 
-    // Keeps track of which question we're currently on
     var currentIndex by remember { mutableStateOf(0) }
+    var answeredQuestions by remember { mutableStateOf(mutableSetOf<String>()) }
 
-    // The main layout of the questionnaire
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Progress bar at the top
+        // Progress bar
         LinearProgressIndicator(
             progress = (currentIndex + 1) / questions.size.toFloat(),
             modifier = Modifier
@@ -42,43 +39,77 @@ fun QuestionnaireScreen(
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
 
-        // Show different question screens depending on where we are
         when (questions[currentIndex]) {
-            // Skin type question
+
+            // 1️⃣ Skin type question
             "skinType" -> SkinTypeQuestion(
-                onAnswer = { currentIndex++ }, // Go to next question when answered
-                onSkip = { currentIndex++ }    // Skip also goes forward
+                onAnswer = {
+                    answeredQuestions.add("skinType")
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        val allAnswered = answeredQuestions.size == questions.size
+                        onFinish(allAnswered)
+                    }
+                },
+                onSkip = {
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        onFinish(false)
+                    }
+                }
             )
 
-            // Sensitive skin question
+            // 2️⃣ Sensitive skin question
             "sensitive" -> SimpleQuestion(
                 question = "Is your skin sensitive?",
                 options = listOf("Yes", "No"),
-                onAnswer = { currentIndex++ },
+                onAnswer = {
+                    answeredQuestions.add("sensitive")
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        val allAnswered = answeredQuestions.size == questions.size
+                        onFinish(allAnswered)
+                    }
+                },
                 onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = { currentIndex++ }
+                onSkip = {
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        onFinish(false)
+                    }
+                }
             )
 
-            // Allergies question (with text input for "Other")
+            // 3️⃣ Allergies question
             "allergies" -> AllergyQuestion(
-                onNext = { currentIndex++ },
+                onNext = {
+                    answeredQuestions.add("allergies")
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        val allAnswered = answeredQuestions.size == questions.size
+                        onFinish(allAnswered)
+                    }
+                },
                 onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = { currentIndex++ }
+                onSkip = {
+                    if (currentIndex < questions.lastIndex) currentIndex++ else {
+                        onFinish(false)
+                    }
+                }
             )
 
-            // Age range question (last one)
+            // 4️⃣ Age range question (last one)
             "ageRange" -> SimpleQuestion(
                 question = "Select your age range",
                 options = listOf("<18", "18–25", "26–40", "40+"),
-                onAnswer = { onFinish() },
+                onAnswer = {
+                    answeredQuestions.add("ageRange")
+                    val allAnswered = answeredQuestions.size == questions.size
+                    onFinish(allAnswered)
+                },
                 onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = { onFinish() }
+                onSkip = { onFinish(false) }
             )
         }
     }
 }
 
-// Skin type selection screen (first question)
+// Skin type selection screen
 @Composable
 fun SkinTypeQuestion(
     onAnswer: () -> Unit,
@@ -86,7 +117,6 @@ fun SkinTypeQuestion(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Centered content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,7 +124,6 @@ fun SkinTypeQuestion(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Title
             Text(
                 text = "Select your skin type",
                 style = MaterialTheme.typography.titleLarge,
@@ -102,7 +131,6 @@ fun SkinTypeQuestion(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // List of skin types (placeholder images for now)
             val skinTypes = listOf(
                 "Dry" to R.drawable.ic_launcher_foreground,
                 "Oily" to R.drawable.ic_launcher_foreground,
@@ -110,7 +138,6 @@ fun SkinTypeQuestion(
                 "Normal" to R.drawable.ic_launcher_foreground
             )
 
-            // Display 2 buttons per row
             for (pair in skinTypes.chunked(2)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -140,7 +167,6 @@ fun SkinTypeQuestion(
             }
         }
 
-        // Skip button
         TextButton(
             onClick = onSkip,
             modifier = Modifier
@@ -155,7 +181,7 @@ fun SkinTypeQuestion(
     }
 }
 
-// Simple multiple-choice question (used for most screens)
+// Simple multiple-choice question
 @Composable
 fun SimpleQuestion(
     question: String,
@@ -166,7 +192,6 @@ fun SimpleQuestion(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Back button
         TextButton(
             onClick = onBack,
             modifier = Modifier
@@ -176,7 +201,6 @@ fun SimpleQuestion(
             Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
         }
 
-        // Main question + options
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -203,7 +227,6 @@ fun SimpleQuestion(
             }
         }
 
-        // Skip button
         TextButton(
             onClick = onSkip,
             modifier = Modifier
@@ -218,25 +241,22 @@ fun SimpleQuestion(
     }
 }
 
-// Allergy question (shows text field if "Other" selected)
+// Allergy question
 @Composable
 fun AllergyQuestion(
     onNext: () -> Unit,
     onBack: () -> Unit,
     onSkip: () -> Unit
 ) {
-    // Remember which option was selected + the custom input
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var customAllergy by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) } // To show red text for invalid input
+    var showError by remember { mutableStateOf(false) }
 
-    // Simple validation: at least 3 letters, no numbers or symbols
     val isValidAllergy = customAllergy.length >= 3 &&
             customAllergy.all { it.isLetter() || it.isWhitespace() }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Back button
         TextButton(
             onClick = onBack,
             modifier = Modifier
@@ -246,7 +266,6 @@ fun AllergyQuestion(
             Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
         }
 
-        // Main question and options
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -254,7 +273,6 @@ fun AllergyQuestion(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Title
             Text(
                 text = "Any allergies?",
                 style = MaterialTheme.typography.titleLarge,
@@ -262,14 +280,13 @@ fun AllergyQuestion(
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            // List of choices
             val options = listOf("Perfume", "Alcohol", "Other")
 
             options.forEach { option ->
                 OutlinedButton(
                     onClick = {
                         selectedOption = option
-                        showError = false // reset any previous error
+                        showError = false
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -285,14 +302,13 @@ fun AllergyQuestion(
                 }
             }
 
-            // If "Other" is selected, show a text field
             if (selectedOption == "Other") {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = customAllergy,
                     onValueChange = {
                         customAllergy = it
-                        showError = false // hide warning while typing
+                        showError = false
                     },
                     label = { Text("Please specify your allergy") },
                     singleLine = true,
@@ -300,7 +316,6 @@ fun AllergyQuestion(
                     isError = !isValidAllergy && customAllergy.isNotBlank()
                 )
 
-                // Show red warning if invalid
                 if (!isValidAllergy && customAllergy.isNotBlank()) {
                     Text(
                         text = "Please enter a valid allergy name (letters only, minimum 3 letters)",
@@ -309,13 +324,10 @@ fun AllergyQuestion(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-
-                // TODO: Verify allergy name on backend later for accuracy (spell check, known allergens)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Continue button — only active when valid input or normal selection
             Button(
                 onClick = {
                     if (selectedOption == "Other" && !isValidAllergy) {
@@ -331,7 +343,6 @@ fun AllergyQuestion(
             }
         }
 
-        // Skip button (bottom-right)
         TextButton(
             onClick = onSkip,
             modifier = Modifier

@@ -55,16 +55,22 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
     // Jetpack Compose Navigation
     implementation("androidx.navigation:navigation-compose:2.8.0")
 
-
+    // Jetpack Compose UI
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+    // This is for Visibility / VisibilityOff icons CreateAccountScreen
+    implementation("androidx.compose.material:material-icons-extended")
+
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

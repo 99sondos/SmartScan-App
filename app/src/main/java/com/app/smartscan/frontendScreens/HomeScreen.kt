@@ -16,11 +16,12 @@ import com.app.smartscan.R
 import androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun HomeScreen(
+    questionnaireCompleted: Boolean, // now receives real value
     onCreateAccount: () -> Unit,   // Runs when "Create Account" is clicked
     onScanProduct: () -> Unit      // Runs when "Scan Product" is clicked
 ) {
     // Simulated value (for now). Later, this should come from ViewModel or SharedPrefs.
-    val questionnaireCompleted = remember { mutableStateOf(false) }
+   // val questionnaireCompleted = remember { mutableStateOf(false) }
 
     // Whole screen layout
     Column(
@@ -49,10 +50,10 @@ fun HomeScreen(
             // "Create Account" button (disabled until questionnaire is done)
             Button(
                 onClick = onCreateAccount,
-                enabled = questionnaireCompleted.value,
+                enabled = questionnaireCompleted,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (questionnaireCompleted.value)
+                    containerColor = if (questionnaireCompleted)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.surfaceVariant
@@ -70,7 +71,7 @@ fun HomeScreen(
             }
 
             // Message if questionnaire not completed
-            if (!questionnaireCompleted.value) {
+            if (!questionnaireCompleted) {
                 Text(
                     text = "Complete the questionnaire to create an account.",
                     color = MaterialTheme.colorScheme.error,
@@ -118,6 +119,7 @@ fun HomeScreenPreview() {
     MaterialTheme {
         HomeScreen(
             onCreateAccount = {},
+            questionnaireCompleted = false, // change to true
             onScanProduct = {}
         )
     }
