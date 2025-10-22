@@ -31,3 +31,6 @@ captures/
 *.keystore
 *.keystore.properties
 *.signing
+
+# Firebase (keep this file out of git)
+google-services.json
