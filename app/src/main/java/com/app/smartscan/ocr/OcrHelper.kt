@@ -68,4 +68,7 @@ class OcrHelper(private val context: Context) {
             "Error: ${e.message}"
         }
     }
+
+
+
 }

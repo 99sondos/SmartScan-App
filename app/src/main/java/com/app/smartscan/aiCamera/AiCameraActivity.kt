@@ -56,6 +56,8 @@ import com.app.smartscan.ocr.BarCodeHelper
 import kotlinx.coroutines.launch
 import java.io.File
 import android.app.Activity
+import com.app.smartscan.ocr.formatIngredientsSmart
+
 
 class AiCameraActivity : ComponentActivity() {
 
@@ -209,21 +211,36 @@ fun CameraPreviewScreen(analysisType: String) {
                                     "ocr" -> {
                                         try {
                                             val ocr = OcrHelper(context)
-                                            ocr.analyze(bitmap)
+                                            val rawText = ocr.analyze(bitmap) // Run OCR once
+                                            val formattedText = formatIngredientsSmart(rawText) // Format detected text
+                                            formattedText
                                         } catch (e: Exception) {
                                             Log.e("AiCamera", "OCR failed: ${e.message}", e)
                                             "OCR failed: ${e.message}"
                                         }
                                     }
+
                                     "barcode" -> {
                                         try {
-                                            val bar = BarCodeHelper(context)
-                                            bar.decode(bitmap)
+                                            val barcodeHelper = BarCodeHelper(context)
+                                            val result = barcodeHelper.decode(bitmap)
+
+                                            // Check if anything was detected
+                                            if (result.isNullOrBlank()) {
+                                                Log.w("AiCamera", "No barcode detected in image.")
+                                                "No barcode detected. Please try again with better lighting or focus."
+                                            } else {
+                                                Log.d("AiCamera", "Barcode detected: $result")
+                                                "Detected barcode: $result"
+                                            }
+
                                         } catch (e: Exception) {
-                                            Log.e("AiCamera", "Barcode failed: ${e.message}", e)
-                                            "Barcode failed: ${e.message}"
+                                            Log.e("AiCamera", "Barcode scanning failed: ${e.message}", e)
+                                            "Barcode scanning failed: ${e.message}"
                                         }
                                     }
+
+
                                     "skin" -> {
                                         try {
                                             // Kör samma analys som i SkinAnalyzerActivity
