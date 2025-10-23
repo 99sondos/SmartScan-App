@@ -1,6 +1,5 @@
 package com.app.smartscan.analysis
 
-import com.app.smartscan.BuildConfig
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
@@ -20,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.app.smartscan.BuildConfig
 import com.app.smartscan.aiCamera.AiCameraActivity
 import com.app.smartscan.ui.theme.SmartScanTheme
 import kotlinx.coroutines.*

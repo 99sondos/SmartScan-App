@@ -1,6 +1,6 @@
 package com.app.smartscan.aiCamera
 
-import com.app.smartscan.analysis.analyzeSkinTypeFromBitmap
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -13,8 +13,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
@@ -29,8 +31,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,12 +53,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
 import com.app.smartscan.ResultActivity
-import com.app.smartscan.ocr.OcrHelper
+import com.app.smartscan.analysis.analyzeSkinTypeFromBitmap
 import com.app.smartscan.ocr.BarCodeHelper
+import com.app.smartscan.ocr.OcrHelper
+import com.app.smartscan.ocr.formatIngredientsSmart
 import kotlinx.coroutines.launch
 import java.io.File
-import android.app.Activity
-import com.app.smartscan.ocr.formatIngredientsSmart
+
 
 
 class AiCameraActivity : ComponentActivity() {
