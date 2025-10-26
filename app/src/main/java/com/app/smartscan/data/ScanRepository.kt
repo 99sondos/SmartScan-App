@@ -35,6 +35,16 @@ class ScanRepository(private val db: FirebaseFirestore) {
     }
 
     /**
+     * Updates the flags for a specific scan document.
+     *
+     * @param scanId The ID of the scan to update.
+     * @param flags The list of flags to set.
+     */
+    suspend fun updateScanFlags(scanId: String, flags: List<String>) {
+        db.collection(FsPaths.SCANS).document(scanId).update("flags", flags).await()
+    }
+
+    /**
      * Observes a specific scan document for real-time updates.
      *
      * @param scanId The ID of the scan to observe.

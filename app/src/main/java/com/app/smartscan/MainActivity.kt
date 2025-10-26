@@ -26,9 +26,9 @@ class MainActivity : ComponentActivity() {
 
         // When in debug mode, connect to the Firebase Emulator Suite.
         if (BuildConfig.USE_EMULATORS) {
-            FirebaseFirestore.getInstance().useEmulator("10.0.2.2", 8080)
-            FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
-            FirebaseFunctions.getInstance().useEmulator("10.0.2.2", 5001)
+            // FirebaseFirestore.getInstance().useEmulator("10.0.2.2", 8080)
+            // FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+            // FirebaseFunctions.getInstance().useEmulator("10.0.2.2", 5001)
         }
 
         setContent {
@@ -56,11 +56,20 @@ fun AuthScreen(modifier: Modifier = Modifier, authViewModel: AuthViewModel = vie
             Text(uiState.message)
             Spacer(Modifier.height(16.dp))
 
-            // Add the test button for the cloud function
+            // This button remains as a test harness for the backend flow.
             Button(onClick = { authViewModel.onFetchProductClicked("3337872411991") }) {
                 Text("Fetch Product (Test)")
             }
             Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { uiState.scanId?.let { authViewModel.onGenerateExplanationClicked(it) } },
+                enabled = uiState.scanId != null
+            ) {
+                Text("Generate Explanation (Test)")
+            }
+            Spacer(Modifier.height(8.dp))
+
             Button(onClick = { authViewModel.onSignOutClicked() }) {
                 Text("Sign Out")
             }

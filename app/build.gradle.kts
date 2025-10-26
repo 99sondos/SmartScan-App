@@ -5,11 +5,6 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-repositories {
-    google()
-    mavenCentral()
-}
-
 android {
     namespace = "com.app.smartscan"
     compileSdk = 34   // keep 34 until Android 15 SDK is installed
@@ -51,10 +46,10 @@ android {
 
 dependencies {
     // Firebase
-    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
-    implementation("com.google.firebase:firebase-analytics-ktx:22.0.2")
-    implementation("com.google.firebase:firebase-firestore-ktx:25.1.1")
-    implementation("com.google.firebase:firebase-functions-ktx:21.0.0")
+    implementation("com.google.firebase:firebase-auth-ktx:23.2.1")
+    implementation("com.google.firebase:firebase-analytics-ktx:22.5.0")
+    implementation("com.google.firebase:firebase-firestore-ktx:25.1.4")
+    implementation("com.google.firebase:firebase-functions-ktx:21.2.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 

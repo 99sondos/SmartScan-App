@@ -8,10 +8,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Products are read-only for all authenticated users.
+    // Products can be read by any authenticated user.
+    // Writes are allowed for now to let our Cloud Function work. We will harden this later.
     match /products/{barcode} {
       allow read: if request.auth != null;
-      allow write: if false; // Lock down writes after initial seed.
+      allow write: if request.auth != null;
     }
 
     // Known allergies are read-only for all authenticated users.
@@ -28,8 +29,14 @@ service cloud.firestore {
       // For creates, the incoming document's uid must match the user.
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
 
-      // For updates, both the existing and incoming documents must belong to the user.
-      allow update: if request.auth != null && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid;
+      // --- THIS IS THE FIX ---
+      // For updates, the user must be the owner, AND they cannot change the explanation or status.
+      // These fields are managed by backend Cloud Functions, which bypass client-side rules.
+      allow update: if request.auth != null
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.explanation == resource.data.explanation
+                    && request.resource.data.status == resource.data.status;
     }
   }
 }

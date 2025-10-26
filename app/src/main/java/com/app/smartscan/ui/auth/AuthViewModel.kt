@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import com.app.smartscan.data.AuthRepository
+import com.app.smartscan.data.*
+import com.app.smartscan.data.model.UserProfile
 import com.app.smartscan.data.seed.AllergySeeder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -24,14 +25,18 @@ data class AuthUiState(
     val email: String = "",
     val password: String = "",
     val message: String = "",
-    val isSignedIn: Boolean = false
+    val isSignedIn: Boolean = false,
+    val scanId: String? = null // Add this to hold the current scan ID
 )
 
 /**
  * ViewModel for the authentication screen.
  */
 class AuthViewModel(
-    private val repository: AuthRepository,
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
+    private val productRepository: ProductRepository,
+    private val scanRepository: ScanRepository,
     private val functions: FirebaseFunctions,
     private val db: FirebaseFirestore
 ) : ViewModel() {
@@ -41,7 +46,7 @@ class AuthViewModel(
 
     init {
         // Check the initial sign-in state
-        val currentUser = repository.currentUser
+        val currentUser = authRepository.currentUser
         _uiState.update { it.copy(isSignedIn = currentUser != null, message = if(currentUser != null) "Signed in as ${currentUser.email}" else "Signed out") }
     }
 
@@ -64,7 +69,7 @@ class AuthViewModel(
     fun onSignUpClicked() {
         viewModelScope.launch {
             try {
-                val user = repository.signUp(
+                val user = authRepository.signUp(
                     _uiState.value.email,
                     _uiState.value.password,
                     _uiState.value.fullName,
@@ -86,7 +91,7 @@ class AuthViewModel(
     fun onSignInClicked() {
         viewModelScope.launch {
             try {
-                val user = repository.signIn(_uiState.value.email, _uiState.value.password)
+                val user = authRepository.signIn(_uiState.value.email, _uiState.value.password)
                 _uiState.update {
                     it.copy(
                         message = "Sign in successful: ${user.email}",
@@ -101,7 +106,7 @@ class AuthViewModel(
     }
 
     fun onSignOutClicked() {
-        repository.signOut()
+        authRepository.signOut()
         _uiState.value = AuthUiState(message = "Signed out")
     }
 
@@ -109,12 +114,52 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(message = "Fetching product...") }
             try {
+                // Step 1: Call the Cloud Function to fetch the product.
                 val data = mapOf("barcode" to barcode)
                 val result = functions.getHttpsCallable("fetchProductFromOBF").call(data).await()
                 val resultMap = result.data as? Map<*, *>
-                _uiState.update { it.copy(message = "Function result: $resultMap") }
+
+                if (resultMap?.get("found") != true) {
+                    throw Exception("Product not found in OpenBeautyFacts.")
+                }
+
+                // Step 2: Get the user and product data from repositories.
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                val userProfile = userRepository.getUser(uid) ?: UserProfile() // Assume default if null
+                val product = productRepository.getProduct(barcode) ?: throw Exception("Product not found after fetch")
+
+                // Step 3: Create the initial scan document.
+                val scanId = scanRepository.createScan(uid, barcode, null)
+
+                // Step 4: Compute flags by comparing ingredients with user's lists.
+                val userLists = userProfile.allergies + userProfile.blacklist
+                val flags = product.ingredients.filter { ingredient ->
+                    userLists.any { userListItem ->
+                        ingredient.contains(userListItem, ignoreCase = true)
+                    }
+                }
+
+                // Step 5: Update the scan with the computed flags.
+                scanRepository.updateScanFlags(scanId, flags)
+
+                _uiState.update { it.copy(message = "Scan created with ${flags.size} flags.", scanId = scanId) }
+
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Function error: ${e.message}") }
+            }
+        }
+    }
+
+    fun onGenerateExplanationClicked(scanId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(message = "Generating explanation...") }
+            try {
+                val data = mapOf("scanId" to scanId)
+                val result = functions.getHttpsCallable("generateExplanation").call(data).await()
+                val resultMap = result.data as? Map<*, *>
+                _uiState.update { it.copy(message = "Explanation result: $resultMap") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Explanation error: ${e.message}") }
             }
         }
     }
@@ -139,9 +184,19 @@ class AuthViewModel(
                 // This is a simple service locator pattern. For a larger app, you'd use Hilt or Koin.
                 val auth = FirebaseAuth.getInstance()
                 val db = FirebaseFirestore.getInstance()
-                val functions = FirebaseFunctions.getInstance()
-                val repository = AuthRepository(auth, db)
-                return AuthViewModel(repository, functions, db) as T
+                val functions = FirebaseFunctions.getInstance("europe-west1")
+                val authRepository = AuthRepository(auth, db)
+                val userRepository = UserRepository(db)
+                val productRepository = ProductRepository(db)
+                val scanRepository = ScanRepository(db)
+                return AuthViewModel(
+                    authRepository,
+                    userRepository,
+                    productRepository,
+                    scanRepository,
+                    functions,
+                    db
+                ) as T
             }
         }
     }
