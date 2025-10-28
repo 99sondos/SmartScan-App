@@ -8,22 +8,29 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
+/**
+ * Unit tests for the OcrHelper class.
+ * These tests use MockK to simulate OCR analysis on a bitmap without requiring
+ * actual image processing or Android dependencies.
+ */
 class OcrHelperTest {
 
     @Test
     fun testOcrAnalyzeReturnsExpectedText() = runBlocking {
-        // Skapa ett mockat Bitmap-objekt (vi behöver ingen riktig bild)
+        // Mock a Bitmap and OcrHelper
         val bitmap = mockk<Bitmap>()
         val mockOcrHelper = mockk<OcrHelper>()
 
-        // Simulera ett förväntat OCR-resultat
+        // Define expected OCR result
         val expectedText = "Water, Alcohol, Fragrance"
+
+        // Simulate OCR behavior
         coEvery { mockOcrHelper.analyze(bitmap) } returns expectedText
 
-        // Anropa funktionen
+        // Run the function
         val result = mockOcrHelper.analyze(bitmap)
 
-        // Kontrollera att resultatet är det förväntade
+        // Verify that the result matches
         assertEquals(expectedText, result)
     }
 
@@ -32,9 +39,12 @@ class OcrHelperTest {
         val bitmap = mockk<Bitmap>()
         val mockOcrHelper = mockk<OcrHelper>()
 
+        // Simulate OCR returning non-null text
         coEvery { mockOcrHelper.analyze(bitmap) } returns "Some OCR text"
 
         val result = mockOcrHelper.analyze(bitmap)
+
+        // Ensure result is not null
         assertNotNull(result)
     }
 }
