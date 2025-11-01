@@ -65,14 +65,26 @@ dependencies {
     implementation(libs.androidx.material3)
 
 
+    //  JUnit – vanliga unit tester
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    //  Robolectric – för att testa Android-klasser (Bitmap, Context) utan emulator
     testImplementation("org.robolectric:robolectric:4.11.1")
+
+    //  Android instrumentation + UI tester
+    androidTestImplementation(libs.androidx.junit)               // Android test runner
+    androidTestImplementation(libs.androidx.espresso.core)       // Espresso (UI test framework)
+    androidTestImplementation(platform(libs.androidx.compose.bom)) // Compose version sync
+    androidTestImplementation(libs.androidx.ui.test.junit4)      // Compose UI test rule & matchers
+
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.0")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.0")
+
+
+    // Behövs för Compose UI tester i debug builds
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
 
     // CameraX
     implementation("androidx.camera:camera-core:1.4.0")
