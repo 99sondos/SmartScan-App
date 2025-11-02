@@ -33,6 +33,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // When in debug mode, connect to the Firebase Emulator Suite.
+        if (BuildConfig.USE_EMULATORS) {
+            // FirebaseFirestore.getInstance().useEmulator("10.0.2.2", 8080)
+            // FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+            // FirebaseFunctions.getInstance().useEmulator("10.0.2.2", 5001)
+        }
+
         setContent {
             AnalysisSelectionScreen(onOptionSelected = { type ->
                 when (type) {
