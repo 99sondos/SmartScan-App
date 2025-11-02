@@ -1,28 +1,37 @@
 package com.app.smartscan
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.smartscan.ui.auth.AuthViewModel
-import com.app.smartscan.ui.theme.SmartScanTheme
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.functions.FirebaseFunctions
+import androidx.compose.ui.unit.sp
+import com.app.smartscan.aiCamera.AiCameraActivity
+import com.app.smartscan.analysis.SkinAnalyzerActivity
 
+/**
+ * MainActivity – Entry point of the app.
+ * Lets the user choose between different analysis modes:
+ * - Skin Analysis
+ * - OCR (Text Recognition)
+ * - Barcode Scanning
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         // When in debug mode, connect to the Firebase Emulator Suite.
         if (BuildConfig.USE_EMULATORS) {
@@ -32,105 +41,69 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            SmartScanTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AuthScreen(modifier = Modifier.padding(innerPadding))
+            AnalysisSelectionScreen(onOptionSelected = { type ->
+                when (type) {
+                    "skin" -> {
+                        startActivity(Intent(this, SkinAnalyzerActivity::class.java))
+                    }
+                    "ocr" -> {
+                        val intent = Intent(this, AiCameraActivity::class.java)
+                        intent.putExtra("analysis_type", "ocr")
+                        startActivity(intent)
+                    }
+                    "barcode" -> {
+                        val intent = Intent(this, AiCameraActivity::class.java)
+                        intent.putExtra("analysis_type", "barcode")
+                        startActivity(intent)
+                    }
                 }
-            }
+            })
         }
     }
 }
 
 @Composable
-fun AuthScreen(modifier: Modifier = Modifier, authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)) {
-    val uiState by authViewModel.uiState.collectAsState()
-
+fun AnalysisSelectionScreen(onOptionSelected: (String) -> Unit) {
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFAFAFA))
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (uiState.isSignedIn) {
-            Text("Welcome!")
-            Spacer(Modifier.height(16.dp))
-            Text(uiState.message)
-            Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Choose Analysis Mode",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 40.dp)
+        )
 
-            // This button remains as a test harness for the backend flow.
-            Button(onClick = { authViewModel.onFetchProductClicked("3337872411991") }) {
-                Text("Fetch Product (Test)")
-            }
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = { uiState.scanId?.let { authViewModel.onGenerateExplanationClicked(it) } },
-                enabled = uiState.scanId != null
-            ) {
-                Text("Generate Explanation (Test)")
-            }
-            Spacer(Modifier.height(8.dp))
-
-            Button(onClick = { authViewModel.onSignOutClicked() }) {
-                Text("Sign Out")
-            }
-
-        } else {
-            Text("Create Your Account")
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = uiState.fullName,
-                onValueChange = { authViewModel.onFullNameChange(it) },
-                label = { Text("Full Name") },
-                singleLine = true
-            )
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.username,
-                onValueChange = { authViewModel.onUsernameChange(it) },
-                label = { Text("Username") },
-                singleLine = true
-            )
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.email,
-                onValueChange = { authViewModel.onEmailChange(it) },
-                label = { Text("Email") },
-                singleLine = true
-            )
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = { authViewModel.onPasswordChange(it) },
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation()
-            )
-            Spacer(Modifier.height(16.dp))
-
-            Text(uiState.message, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(16.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { authViewModel.onSignInClicked() }) {
-                    Text("Sign In")
-                }
-                Button(onClick = { authViewModel.onSignUpClicked() }) {
-                    Text("Sign Up")
-                }
-            }
+        Button(
+            onClick = { onOptionSelected("skin") },
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .size(width = 220.dp, height = 50.dp)
+        ) {
+            Text("Skin Analyzer")
         }
-    }
-}
 
+        Button(
+            onClick = { onOptionSelected("ocr") },
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .size(width = 220.dp, height = 50.dp)
+        ) {
+            Text("OCR Text Reader")
+        }
 
-@Preview(showBackground = true)
-@Composable
-fun AuthScreenPreview() {
-    SmartScanTheme {
-        AuthScreen()
+        Button(
+            onClick = { onOptionSelected("barcode") },
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .size(width = 220.dp, height = 50.dp)
+        ) {
+            Text("Barcode Scanner")
+        }
     }
 }
