@@ -1,126 +1,126 @@
 package com.app.smartscan.frontendScreens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.smartscan.R
-import androidx.compose.ui.tooling.preview.Preview
+
 @Composable
 fun HomeScreen(
-    questionnaireCompleted: Boolean, // now receives real value
-    onCreateAccount: () -> Unit,   // Runs when "Create Account" is clicked
-    onScanProduct: () -> Unit      // Runs when "Scan Product" is clicked
+    questionnaireCompleted: Boolean,
+    accountCreated: Boolean,
+    onCreateAccount: () -> Unit,
+    onProfile: () -> Unit,
+    onScanProduct: () -> Unit
 ) {
-    // Simulated value (for now). Later, this should come from ViewModel or SharedPrefs.
-   // val questionnaireCompleted = remember { mutableStateOf(false) }
-
-    // Whole screen layout
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFF9F9F9))
             .padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // --- App logo section ---
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground), // temporary logo
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
             contentDescription = "SmartSkin Logo",
             modifier = Modifier
-                .size(120.dp)
+                .size(130.dp)
                 .padding(top = 32.dp)
         )
 
-        // --- Main buttons ---
-// --- Main buttons ---
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "SmartSkin",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Discover your perfect skincare match.",
+                fontSize = 16.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        // 🔹 Buttons section
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            // "Create Account" button (disabled until questionnaire is done)
-            Button(
-                onClick = onCreateAccount,
-                enabled = questionnaireCompleted,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (questionnaireCompleted)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
-                modifier = Modifier
-                    .fillMaxWidth(0.65f) // ⬅ narrower, centered buttons
-                    .height(64.dp)       // ⬆ taller for better look & feel
-            ) {
-                Text(
-                    "Create Account",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            // 🔹 Dynamisk knapp
+            if (accountCreated) {
+                Button(
+                    onClick = onProfile,
+                    shape = RoundedCornerShape(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEAEAEA)),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(55.dp)
+                ) {
+                    Text("My Profile", color = Color.Black, fontSize = 16.sp)
+                }
+            } else {
+                Button(
+                    onClick = onCreateAccount,
+                    enabled = questionnaireCompleted,
+                    shape = RoundedCornerShape(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (questionnaireCompleted)
+                            Color(0xFFEAEAEA) else Color(0xFFF2F2F2)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(55.dp)
+                ) {
+                    Text("Create Account", color = Color.Black, fontSize = 16.sp)
+                }
+
+                if (!questionnaireCompleted) {
+                    Text(
+                        text = "Complete the questionnaire to create an account.",
+                        color = Color(0xFFCC5C5C),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
 
-            // Message if questionnaire not completed
-            if (!questionnaireCompleted) {
-                Text(
-                    text = "Complete the questionnaire to create an account.",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            // "Scan Product" button (always enabled)
+            // 🔹 Scan Product button
             OutlinedButton(
                 onClick = onScanProduct,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(40.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                 modifier = Modifier
-                    .fillMaxWidth(0.65f)
-                    .height(64.dp)
+                    .fillMaxWidth(0.8f)
+                    .height(55.dp)
             ) {
-                Text(
-                    "Scan Product",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Text("Scan Product", fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
         }
 
-        // --- App tagline text at bottom ---
-        Spacer(modifier = Modifier.height(5.dp)) // moves it up a bit
-
         Text(
-            text = "Your personal skincare assistant\n" +
-                    "Scan products, explore ingredients, and find what’s best for your skin",
+            text = "Your personal skincare assistant\nScan, explore and find what’s best for your skin.",
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color.Gray,
             fontSize = 13.sp,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-    }
-}
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun HomeScreenPreview() {
-    MaterialTheme {
-        HomeScreen(
-            onCreateAccount = {},
-            questionnaireCompleted = false, // change to true
-            onScanProduct = {}
+            modifier = Modifier.padding(bottom = 20.dp)
         )
     }
 }

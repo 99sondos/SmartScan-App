@@ -14,39 +14,28 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Screen for creating an account
- * Shown when user presses "Create Account" on the Home screen.
- */
 @Composable
 fun CreateAccountScreen(
-    onBack: () -> Unit,       // Go back to HomeScreen
-    onCreateAccount: () -> Unit // Called when the user presses "Create Account"
+    onBack: () -> Unit,
+    onCreateAccount: (String) -> Unit // ⬅️ skickar användarnamnet
 ) {
-    // --- Remember text input values ---
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Check if all fields are filled
-    val isFormValid = fullName.isNotBlank() &&
-            email.isNotBlank() &&
-            username.isNotBlank() &&
-            password.isNotBlank()
+    val isFormValid =
+        fullName.isNotBlank() && email.isNotBlank() && username.isNotBlank() && password.isNotBlank()
 
-    // --- Main screen layout ---
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        // Back button (top-left)
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
@@ -58,7 +47,6 @@ fun CreateAccountScreen(
             )
         }
 
-        // Center content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,7 +63,6 @@ fun CreateAccountScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Full name field ---
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
@@ -86,7 +73,6 @@ fun CreateAccountScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Email field ---
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -98,7 +84,6 @@ fun CreateAccountScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Username field ---
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
@@ -109,7 +94,6 @@ fun CreateAccountScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Password field with visibility toggle ---
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -118,12 +102,10 @@ fun CreateAccountScreen(
                 visualTransformation = if (passwordVisible)
                     VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    val icon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
+                    val icon = if (passwordVisible)
+                        Icons.Default.VisibilityOff else Icons.Default.Visibility
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
-                        )
+                        Icon(icon, contentDescription = null)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -131,10 +113,9 @@ fun CreateAccountScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Create Account button ---
             Button(
-                onClick = onCreateAccount,
-                enabled = isFormValid, // Disabled until all fields filled
+                onClick = { onCreateAccount(fullName) }, // skickar fullName
+                enabled = isFormValid,
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
@@ -145,15 +126,3 @@ fun CreateAccountScreen(
         }
     }
 }
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CreateAccountScreenPreview() {
-    MaterialTheme {
-        CreateAccountScreen(
-            onBack = {},
-            onCreateAccount = {}
-        )
-    }
-}
-
-

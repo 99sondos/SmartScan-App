@@ -9,14 +9,13 @@ repositories {
     google()
     mavenCentral()
 }
-
 android {
     namespace = "com.app.smartscan"
     compileSdk = 34   // keep 34 until Android 15 SDK is installed
 
     defaultConfig {
         applicationId = "com.app.smartscan"
-        minSdk = 24
+        minSdk = 23
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

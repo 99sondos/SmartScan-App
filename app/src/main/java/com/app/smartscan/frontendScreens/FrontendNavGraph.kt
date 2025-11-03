@@ -1,63 +1,85 @@
 package com.app.smartscan.frontendScreens
 
-import androidx.compose.runtime.Composable
+import android.util.Log
+import androidx.compose.runtime.*
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import android.util.Log   // ✅ add this import
 
 @Composable
 fun FrontendNavGraph() {
     val navController = rememberNavController()
 
+    // 🔹 Här sparar vi om kontot är skapat
+    var accountCreated by remember { mutableStateOf(false) }
+    var userName by remember { mutableStateOf("") }
+
     NavHost(navController = navController, startDestination = "questionnaire") {
 
-        // 1. Questionnaire screen
         composable("questionnaire") {
             QuestionnaireScreen(
                 onFinish = { allAnswered ->
-                    // When questionnaire finished — go to Home with completed=true/false
                     navController.navigate("home?completed=$allAnswered")
                 }
             )
         }
 
-        // 2. Home screen — can receive a “completed” argument
         composable(
-            route = "home?completed={completed}",
+            "home?completed={completed}",
             arguments = listOf(
                 navArgument("completed") {
                     type = NavType.BoolType
                     defaultValue = false
                 }
             )
-        ) { backStackEntry ->
-            val completed = backStackEntry.arguments
-                ?.getBoolean("completed")
-                ?: false
-
-            // ✅ Add this debugging line here
+        ) { entry ->
+            val completed = entry.arguments?.getBoolean("completed") ?: false
             Log.d("FrontendNavGraph", "Questionnaire completed: $completed")
 
             HomeScreen(
-                questionnaireCompleted = completed, // passes result to Home
+                questionnaireCompleted = completed,
+                accountCreated = accountCreated,
                 onCreateAccount = { navController.navigate("createAccount") },
-                onScanProduct = { /* TODO: Add scan navigation later */ }
+                onProfile = { navController.navigate("profile/$userName") },
+                onScanProduct = { /* TODO: scan later */ }
             )
         }
 
-        // 3. Create Account screen
-        composable(route = "createAccount") {
+        composable("createAccount") {
             CreateAccountScreen(
                 onBack = { navController.popBackStack() },
-                onCreateAccount = {
-                    // TODO: Add logic for account creation or next screen
-                    // For now, just go back to Home after creating account
-                    navController.popBackStack()
+                onCreateAccount = { name ->
+                    // 🔹 Spara att användaren skapat konto
+                    accountCreated = true
+                    userName = name
+                    navController.navigate("profile/$name") {
+                        popUpTo("home?completed={completed}") { inclusive = false }
+                    }
                 }
             )
+        }
+
+        composable(
+            route = "profile/{name}",
+            arguments = listOf(navArgument("name") { type = NavType.StringType })
+        ) { entry ->
+            val name = entry.arguments?.getString("name") ?: "User"
+            ProfileScreen(
+                userName = name,
+                onBack = { navController.navigate("home?completed=true") },
+                onFavorites = { navController.navigate("favorites") },
+                onBlacklist = { navController.navigate("blacklist") }
+            )
+        }
+
+        composable("favorites") {
+            FavoritesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable("blacklist") {
+            BlacklistScreen(onBack = { navController.popBackStack() })
         }
     }
 }

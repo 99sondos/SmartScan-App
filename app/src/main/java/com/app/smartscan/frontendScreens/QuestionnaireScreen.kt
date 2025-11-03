@@ -1,358 +1,258 @@
 package com.app.smartscan.frontendScreens
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.smartscan.R
 
-// Main composable for showing all the questions one by one
 @Composable
-fun QuestionnaireScreen(
-    onFinish: (Boolean) -> Unit   // true = all answered, false = skipped any
-) {
-    val questions = listOf("skinType", "sensitive", "allergies", "ageRange")
-
+fun QuestionnaireScreen(onFinish: (Boolean) -> Unit) {
     var currentIndex by remember { mutableStateOf(0) }
-    var answeredQuestions by remember { mutableStateOf(mutableSetOf<String>()) }
+    val totalQuestions = 4
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFFF9F9F9)) // samma rena bakgrund som HomeScreen
     ) {
-        // Progress bar
-        LinearProgressIndicator(
-            progress = (currentIndex + 1) / questions.size.toFloat(),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .padding(bottom = 24.dp),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
 
-        when (questions[currentIndex]) {
+            when (currentIndex) {
+                0 -> SkinTypeQuestion(
+                    onAnswer = { currentIndex++ },
+                    onSkip = { currentIndex++ }
+                )
 
-            // 1️⃣ Skin type question
-            "skinType" -> SkinTypeQuestion(
-                onAnswer = {
-                    answeredQuestions.add("skinType")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
-                },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
-            )
+                1 -> GridQuestion(
+                    question = "Is your skin sensitive?",
+                    options = listOf("Yes", "No"),
+                    onAnswer = { currentIndex++ },
+                    onBack = { currentIndex-- },
+                    onSkip = { currentIndex++ }
+                )
 
-            // 2️⃣ Sensitive skin question
-            "sensitive" -> SimpleQuestion(
-                question = "Is your skin sensitive?",
-                options = listOf("Yes", "No"),
-                onAnswer = {
-                    answeredQuestions.add("sensitive")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
-                },
-                onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
-            )
+                2 -> GridQuestion(
+                    question = "Do you have any allergies?",
+                    options = listOf("Perfume", "Alcohol", "Other", "None"),
+                    onAnswer = { currentIndex++ },
+                    onBack = { currentIndex-- },
+                    onSkip = { currentIndex++ }
+                )
 
-            // 3️⃣ Allergies question
-            "allergies" -> AllergyQuestion(
-                onNext = {
-                    answeredQuestions.add("allergies")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
-                },
-                onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
-            )
+                3 -> GridQuestion(
+                    question = "Select your age range",
+                    options = listOf("<18", "18–25", "26–40", "40+"),
+                    onAnswer = { onFinish(true) },
+                    onBack = { currentIndex-- },
+                    onSkip = { onFinish(false) }
+                )
+            }
+        }
 
-            // 4️⃣ Age range question (last one)
-            "ageRange" -> SimpleQuestion(
-                question = "Select your age range",
-                options = listOf("<18", "18–25", "26–40", "40+"),
-                onAnswer = {
-                    answeredQuestions.add("ageRange")
-                    val allAnswered = answeredQuestions.size == questions.size
-                    onFinish(allAnswered)
-                },
-                onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = { onFinish(false) }
-            )
+        // 🔹 Prickar längst ner för progress
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            repeat(totalQuestions) { index ->
+                val isActive = index == currentIndex
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp)
+                        .size(if (isActive) 12.dp else 8.dp)
+                        .background(
+                            color = if (isActive) Color.Black else Color.LightGray,
+                            shape = RoundedCornerShape(50)
+                        )
+                )
+            }
         }
     }
 }
 
-// Skin type selection screen
+// 🔹 Fråga 1 – Skin type
 @Composable
-fun SkinTypeQuestion(
-    onAnswer: () -> Unit,
-    onSkip: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
+fun SkinTypeQuestion(onAnswer: () -> Unit, onSkip: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Select your skin type",
+            color = Color.Black,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Select your skin type",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            val skinTypes = listOf(
-                "Dry" to R.drawable.ic_launcher_foreground,
-                "Oily" to R.drawable.ic_launcher_foreground,
-                "Combination" to R.drawable.ic_launcher_foreground,
-                "Normal" to R.drawable.ic_launcher_foreground
-            )
+        val skinTypes = listOf(
+            "Dry" to R.drawable.ic_launcher_foreground,
+            "Oily" to R.drawable.ic_launcher_foreground,
+            "Combination" to R.drawable.ic_launcher_foreground,
+            "Normal" to R.drawable.ic_launcher_foreground
+        )
 
-            for (pair in skinTypes.chunked(2)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    for ((label, imageRes) in pair) {
-                        ElevatedButton(
-                            onClick = onAnswer,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .weight(1f)
-                                .height(140.dp)
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Image(
-                                    painter = painterResource(id = imageRes),
-                                    contentDescription = label,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(label)
-                            }
+        var selected by remember { mutableStateOf<String?>(null) }
+
+        for (pair in skinTypes.chunked(2)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                for ((label, imageRes) in pair) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(8.dp)
+                            .aspectRatio(1f)
+                            .background(
+                                color = if (selected == label)
+                                    Color(0xFFEAEAEA) else Color.White,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (selected == label) Color.Black else Color(0xFFDADADA),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable {
+                                selected = label
+                                onAnswer()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(
+                                painter = painterResource(id = imageRes),
+                                contentDescription = label,
+                                modifier = Modifier.size(50.dp)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = label,
+                                color = Color.Black,
+                                fontWeight = if (selected == label) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     }
                 }
             }
         }
 
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
+        TextButton(onClick = onSkip, modifier = Modifier.padding(top = 20.dp)) {
+            Text("Skip for now", color = Color.Gray)
         }
     }
 }
 
-// Simple multiple-choice question
+// 🔹 Övriga frågor i samma gridlayout
 @Composable
-fun SimpleQuestion(
+fun GridQuestion(
     question: String,
     options: List<String>,
     onAnswer: () -> Unit,
     onBack: () -> Unit,
     onSkip: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    var selected by remember { mutableStateOf<String?>(null) }
 
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
-            Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
-        }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = question,
+            color = Color.Black,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = question,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            options.forEach { option ->
-                OutlinedButton(
-                    onClick = onAnswer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                ) {
-                    Text(option)
+        // Visa i grid-format (två kolumner)
+        for (pair in options.chunked(2)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                for (option in pair) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(8.dp)
+                            .aspectRatio(1f)
+                            .background(
+                                color = if (selected == option)
+                                    Color(0xFFEAEAEA) else Color.White,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (selected == option) Color.Black else Color(0xFFDADADA),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable {
+                                selected = option
+                                onAnswer()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = option,
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = if (selected == option) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
         }
 
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Back och Skip-knappar
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(0.9f)
         ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
+            TextButton(onClick = onBack) {
+                Text("⬅ Back", color = Color.Gray)
+            }
+            TextButton(onClick = onSkip) {
+                Text("Skip", color = Color.Gray)
+            }
         }
     }
 }
 
-// Allergy question
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun AllergyQuestion(
-    onNext: () -> Unit,
-    onBack: () -> Unit,
-    onSkip: () -> Unit
-) {
-    var selectedOption by remember { mutableStateOf<String?>(null) }
-    var customAllergy by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-
-    val isValidAllergy = customAllergy.length >= 3 &&
-            customAllergy.all { it.isLetter() || it.isWhitespace() }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
-            Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Any allergies?",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            val options = listOf("Perfume", "Alcohol", "Other")
-
-            options.forEach { option ->
-                OutlinedButton(
-                    onClick = {
-                        selectedOption = option
-                        showError = false
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (selectedOption == option)
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        else
-                            MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Text(option)
-                }
-            }
-
-            if (selectedOption == "Other") {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = customAllergy,
-                    onValueChange = {
-                        customAllergy = it
-                        showError = false
-                    },
-                    label = { Text("Please specify your allergy") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = !isValidAllergy && customAllergy.isNotBlank()
-                )
-
-                if (!isValidAllergy && customAllergy.isNotBlank()) {
-                    Text(
-                        text = "Please enter a valid allergy name (letters only, minimum 3 letters)",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    if (selectedOption == "Other" && !isValidAllergy) {
-                        showError = true
-                    } else {
-                        onNext()
-                    }
-                },
-                enabled = selectedOption != null &&
-                        (selectedOption != "Other" || customAllergy.isNotBlank())
-            ) {
-                Text("Continue")
-            }
-        }
-
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
-        }
-    }
+fun QuestionnairePreview() {
+    QuestionnaireScreen(onFinish = {})
 }

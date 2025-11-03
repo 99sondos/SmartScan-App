@@ -2,6 +2,9 @@ package com.app.smartscan.frontendScreens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,10 +16,43 @@ fun MainScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+            .padding(16.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // 🔹 Rad högst upp med knappar (vänster/höger hörn)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // ❤️ Favoritknapp (vänster)
+            IconButton(onClick = {
+                // TODO: Lägg till funktion för "lägg till i favoriter"
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.FavoriteBorder,
+                    contentDescription = "Favorit",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // 🚫 Blacklistknapp (höger)
+            IconButton(onClick = {
+                // TODO: Lägg till funktion för "lägg till i blacklist"
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.Block,
+                    contentDescription = "Blacklist",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        // 🔹 Mitteninnehåll (för test/design)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.align(Alignment.Center)
+        ) {
             Text(
                 text = "Welcome to SmartSkin!",
                 fontSize = 22.sp
