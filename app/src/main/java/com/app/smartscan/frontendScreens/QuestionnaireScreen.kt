@@ -24,7 +24,7 @@ fun QuestionnaireScreen(onFinish: (Boolean) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9)) // samma rena bakgrund som HomeScreen
+            .background(Color(0xFFF9F9F9))
     ) {
         Column(
             modifier = Modifier
@@ -33,7 +33,6 @@ fun QuestionnaireScreen(onFinish: (Boolean) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
             when (currentIndex) {
                 0 -> SkinTypeQuestion(
                     onAnswer = { currentIndex++ },
@@ -66,7 +65,7 @@ fun QuestionnaireScreen(onFinish: (Boolean) -> Unit) {
             }
         }
 
-        // 🔹 Prickar längst ner för progress
+        // 🔹 Progress dots
         Row(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier
@@ -89,7 +88,7 @@ fun QuestionnaireScreen(onFinish: (Boolean) -> Unit) {
     }
 }
 
-// 🔹 Fråga 1 – Skin type
+// 🔹 Question 1 – Skin type
 @Composable
 fun SkinTypeQuestion(onAnswer: () -> Unit, onSkip: () -> Unit) {
     Column(
@@ -107,10 +106,10 @@ fun SkinTypeQuestion(onAnswer: () -> Unit, onSkip: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         val skinTypes = listOf(
-            "Dry" to R.drawable.ic_launcher_foreground,
-            "Oily" to R.drawable.ic_launcher_foreground,
-            "Combination" to R.drawable.ic_launcher_foreground,
-            "Normal" to R.drawable.ic_launcher_foreground
+            "Dry" to R.drawable.cracked,
+            "Oily" to R.drawable.leaf_oily,
+            "Combination" to R.drawable.combo,
+            "Normal" to R.drawable.normal
         )
 
         var selected by remember { mutableStateOf<String?>(null) }
@@ -168,7 +167,7 @@ fun SkinTypeQuestion(onAnswer: () -> Unit, onSkip: () -> Unit) {
     }
 }
 
-// 🔹 Övriga frågor i samma gridlayout
+// 🔹 Other questions with grid layout
 @Composable
 fun GridQuestion(
     question: String,
@@ -193,7 +192,6 @@ fun GridQuestion(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Visa i grid-format (två kolumner)
         for (pair in options.chunked(2)) {
             Row(
                 modifier = Modifier
@@ -236,7 +234,6 @@ fun GridQuestion(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Back och Skip-knappar
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth(0.9f)

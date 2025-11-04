@@ -7,17 +7,25 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.app.smartscan.ui.SplashScreen // från Shaheras version
 
 @Composable
 fun FrontendNavGraph() {
     val navController = rememberNavController()
 
-    // 🔹 Här sparar vi om kontot är skapat
+    // 🔹 Spara om användaren har skapat konto
     var accountCreated by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
 
-    NavHost(navController = navController, startDestination = "questionnaire") {
+    // 🔹 Startar med Splash (från Shahera)
+    NavHost(navController = navController, startDestination = "splash") {
 
+        // Splash Screen
+        composable("splash") {
+            SplashScreen(navController)
+        }
+
+        // Questionnaire
         composable("questionnaire") {
             QuestionnaireScreen(
                 onFinish = { allAnswered ->
@@ -26,6 +34,7 @@ fun FrontendNavGraph() {
             )
         }
 
+        // Home
         composable(
             "home?completed={completed}",
             arguments = listOf(
@@ -34,8 +43,8 @@ fun FrontendNavGraph() {
                     defaultValue = false
                 }
             )
-        ) { entry ->
-            val completed = entry.arguments?.getBoolean("completed") ?: false
+        ) { backStackEntry ->
+            val completed = backStackEntry.arguments?.getBoolean("completed") ?: false
             Log.d("FrontendNavGraph", "Questionnaire completed: $completed")
 
             HomeScreen(
@@ -47,11 +56,11 @@ fun FrontendNavGraph() {
             )
         }
 
+        // Create Account
         composable("createAccount") {
             CreateAccountScreen(
                 onBack = { navController.popBackStack() },
                 onCreateAccount = { name ->
-                    // 🔹 Spara att användaren skapat konto
                     accountCreated = true
                     userName = name
                     navController.navigate("profile/$name") {
@@ -61,6 +70,7 @@ fun FrontendNavGraph() {
             )
         }
 
+        // Profile
         composable(
             route = "profile/{name}",
             arguments = listOf(navArgument("name") { type = NavType.StringType })
@@ -74,10 +84,12 @@ fun FrontendNavGraph() {
             )
         }
 
+        // Favorites
         composable("favorites") {
             FavoritesScreen(onBack = { navController.popBackStack() })
         }
 
+        // Blacklist
         composable("blacklist") {
             BlacklistScreen(onBack = { navController.popBackStack() })
         }

@@ -27,19 +27,21 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
+            .background(Color(0xFFF9F9F9)) // Clean bakgrund
             .padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        // 🔹 Logo (använder den nya från Shahera)
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            painter = painterResource(id = R.drawable.smartskin_logo),
             contentDescription = "SmartSkin Logo",
             modifier = Modifier
-                .size(130.dp)
+                .size(200.dp)
                 .padding(top = 32.dp)
         )
 
+        // 🔹 Appens titel och tagline
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "SmartSkin",
@@ -56,40 +58,51 @@ fun HomeScreen(
             )
         }
 
-        // 🔹 Buttons section
+        // 🔹 Knappsektion
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            // 🔹 Dynamisk knapp
             if (accountCreated) {
+                // 🔸 "My Profile" – visas när konto skapat
                 Button(
                     onClick = onProfile,
                     shape = RoundedCornerShape(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEAEAEA)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(55.dp)
                 ) {
-                    Text("My Profile", color = Color.Black, fontSize = 16.sp)
+                    Text(
+                        "My Profile",
+                        color = Color.Black,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             } else {
+                // 🔸 "Create Account" – visas om inget konto finns
                 Button(
                     onClick = onCreateAccount,
                     enabled = questionnaireCompleted,
                     shape = RoundedCornerShape(40.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (questionnaireCompleted)
-                            Color(0xFFEAEAEA) else Color(0xFFF2F2F2)
+                        containerColor = Color.White
                     ),
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(55.dp)
                 ) {
-                    Text("Create Account", color = Color.Black, fontSize = 16.sp)
+                    Text(
+                        "Create Account",
+                        color = Color.Black,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
+                // 🔸 Röd varningstext
                 if (!questionnaireCompleted) {
                     Text(
                         text = "Complete the questionnaire to create an account.",
@@ -101,7 +114,7 @@ fun HomeScreen(
                 }
             }
 
-            // 🔹 Scan Product button
+            // 🔸 "Scan Product" – Outlined knapp
             OutlinedButton(
                 onClick = onScanProduct,
                 shape = RoundedCornerShape(40.dp),
@@ -111,10 +124,15 @@ fun HomeScreen(
                     .fillMaxWidth(0.8f)
                     .height(55.dp)
             ) {
-                Text("Scan Product", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "Scan Product",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 
+        // 🔹 Text längst ner
         Text(
             text = "Your personal skincare assistant\nScan, explore and find what’s best for your skin.",
             textAlign = TextAlign.Center,
