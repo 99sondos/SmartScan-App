@@ -1,6 +1,7 @@
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # IDE
 .idea/
@@ -31,3 +32,6 @@ captures/
 *.keystore
 *.keystore.properties
 *.signing
+
+# Firebase (keep this file out of git)
+google-services.json
