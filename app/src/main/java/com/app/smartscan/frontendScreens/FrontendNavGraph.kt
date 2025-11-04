@@ -20,7 +20,7 @@ fun FrontendNavGraph() {
     // 🔹 Startar med Splash (från Shahera)
     NavHost(navController = navController, startDestination = "splash") {
 
-        // Splash Screen
+        // Splash Screen shahera
         composable("splash") {
             SplashScreen(navController)
         }
