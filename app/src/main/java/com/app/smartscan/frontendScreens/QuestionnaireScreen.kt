@@ -41,7 +41,7 @@ fun QuestionnaireScreen(
 
         when (questions[currentIndex]) {
 
-            // 1️⃣ Skin type question
+            // Skin type question
             "skinType" -> SkinTypeQuestion(
                 onAnswer = {
                     answeredQuestions.add("skinType")
@@ -57,7 +57,7 @@ fun QuestionnaireScreen(
                 }
             )
 
-            // 2️⃣ Sensitive skin question
+            // Sensitive skin question
             "sensitive" -> SimpleQuestion(
                 question = "Is your skin sensitive?",
                 options = listOf("Yes", "No"),
@@ -76,7 +76,7 @@ fun QuestionnaireScreen(
                 }
             )
 
-            // 3️⃣ Allergies question
+            // Allergies question
             "allergies" -> AllergyQuestion(
                 onNext = {
                     answeredQuestions.add("allergies")
@@ -93,7 +93,7 @@ fun QuestionnaireScreen(
                 }
             )
 
-            // 4️⃣ Age range question (last one)
+            // Age range question (last one)
             "ageRange" -> SimpleQuestion(
                 question = "Select your age range",
                 options = listOf("<18", "18–25", "26–40", "40+"),
@@ -132,10 +132,10 @@ fun SkinTypeQuestion(
             Spacer(modifier = Modifier.height(16.dp))
 
             val skinTypes = listOf(
-                "Dry" to R.drawable.ic_launcher_foreground,
-                "Oily" to R.drawable.ic_launcher_foreground,
-                "Combination" to R.drawable.ic_launcher_foreground,
-                "Normal" to R.drawable.ic_launcher_foreground
+                "Dry" to R.drawable.cracked,
+                "Oily" to R.drawable.leaf_oily,
+                "Combination" to R.drawable.combo,
+                "Normal" to R.drawable.normal
             )
 
             for (pair in skinTypes.chunked(2)) {

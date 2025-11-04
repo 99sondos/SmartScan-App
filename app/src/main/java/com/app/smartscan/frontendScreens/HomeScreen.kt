@@ -33,10 +33,10 @@ fun HomeScreen(
     ) {
         // --- App logo section ---
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground), // temporary logo
+            painter = painterResource(id = R.drawable.smartskin_logo), // temporary logo
             contentDescription = "SmartSkin Logo",
             modifier = Modifier
-                .size(120.dp)
+                .size(255.dp)
                 .padding(top = 32.dp)
         )
 

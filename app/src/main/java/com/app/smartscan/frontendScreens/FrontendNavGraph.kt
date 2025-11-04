@@ -6,13 +6,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import android.util.Log   // ✅ add this import
+import android.util.Log
+import com.app.smartscan.ui.SplashScreen // import splash screen new
 
 @Composable
 fun FrontendNavGraph() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "questionnaire") {
+    NavHost(navController = navController, startDestination = "splash") { // questionnaire
+
+        // Splash Screen (SmartSkin logo animation)
+        composable("splash") {
+            SplashScreen(navController)
+        }
 
         // 1. Questionnaire screen
         composable("questionnaire") {
@@ -38,7 +44,7 @@ fun FrontendNavGraph() {
                 ?.getBoolean("completed")
                 ?: false
 
-            // ✅ Add this debugging line here
+            // Added debugging line here
             Log.d("FrontendNavGraph", "Questionnaire completed: $completed")
 
             HomeScreen(
