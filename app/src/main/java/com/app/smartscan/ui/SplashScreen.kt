@@ -7,14 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Animatable
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(navController: NavController) {
+fun SplashScreen(onTimeout: () -> Unit) {
     // Background and logo animation container
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -24,15 +20,13 @@ fun SplashScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            SmartSkinLogo() // my animated logo
+            SmartSkinLogo() // your animated logo (unchanged)
         }
     }
 
-    // After a few seconds go to Questionnaire
+    // ✅ Wait and call callback
     LaunchedEffect(Unit) {
         delay(4000) // 4 seconds splash duration
-        navController.navigate("questionnaire") {
-            popUpTo("splash") { inclusive = true } // remove splash from back stack
-        }
+        onTimeout()
     }
 }

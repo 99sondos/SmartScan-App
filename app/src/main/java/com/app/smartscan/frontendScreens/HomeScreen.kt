@@ -1,5 +1,6 @@
 package com.app.smartscan.frontendScreens
 
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,12 +10,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.smartscan.R
+import com.app.smartscan.aiCamera.AiCameraActivity
 
 @Composable
 fun HomeScreen(
@@ -24,24 +27,24 @@ fun HomeScreen(
     onProfile: () -> Unit,
     onScanProduct: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9)) // Clean bakgrund
+            .background(Color(0xFFF9F9F9))
             .padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // 🔹 Logo (använder den nya från Shahera)
         Image(
             painter = painterResource(id = R.drawable.smartskin_logo),
             contentDescription = "SmartSkin Logo",
             modifier = Modifier
-                .size(200.dp)
+                .size(255.dp)
                 .padding(top = 32.dp)
         )
 
-        // 🔹 Appens titel och tagline
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "SmartSkin",
@@ -58,51 +61,40 @@ fun HomeScreen(
             )
         }
 
-        // 🔹 Knappsektion
+        // 🔹 Buttons section
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
+            // 🔹 Dynamisk knapp
             if (accountCreated) {
-                // 🔸 "My Profile" – visas när konto skapat
                 Button(
                     onClick = onProfile,
                     shape = RoundedCornerShape(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEAEAEA)),
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(55.dp)
                 ) {
-                    Text(
-                        "My Profile",
-                        color = Color.Black,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("My Profile", color = Color.Black, fontSize = 16.sp)
                 }
             } else {
-                // 🔸 "Create Account" – visas om inget konto finns
                 Button(
                     onClick = onCreateAccount,
                     enabled = questionnaireCompleted,
                     shape = RoundedCornerShape(40.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White
+                        containerColor = if (questionnaireCompleted)
+                            Color(0xFFEAEAEA) else Color(0xFFF2F2F2)
                     ),
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(55.dp)
                 ) {
-                    Text(
-                        "Create Account",
-                        color = Color.Black,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Create Account", color = Color.Black, fontSize = 16.sp)
                 }
 
-                // 🔸 Röd varningstext
                 if (!questionnaireCompleted) {
                     Text(
                         text = "Complete the questionnaire to create an account.",
@@ -114,9 +106,13 @@ fun HomeScreen(
                 }
             }
 
-            // 🔸 "Scan Product" – Outlined knapp
+            // 🔹 Scan Product button → öppnar AI-kameran
             OutlinedButton(
-                onClick = onScanProduct,
+                onClick = {
+                    val intent = Intent(context, AiCameraActivity::class.java)
+                    intent.putExtra("analysis_type", "barcode")
+                    context.startActivity(intent)
+                },
                 shape = RoundedCornerShape(40.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
@@ -124,15 +120,10 @@ fun HomeScreen(
                     .fillMaxWidth(0.8f)
                     .height(55.dp)
             ) {
-                Text(
-                    "Scan Product",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Text("Scan Product", fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
         }
 
-        // 🔹 Text längst ner
         Text(
             text = "Your personal skincare assistant\nScan, explore and find what’s best for your skin.",
             textAlign = TextAlign.Center,

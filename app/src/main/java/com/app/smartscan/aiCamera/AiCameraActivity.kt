@@ -13,10 +13,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
@@ -34,13 +32,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,15 +44,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.smartscan.ResultActivity
 import com.app.smartscan.analysis.analyzeSkinTypeFromBitmap
 import com.app.smartscan.ocr.BarCodeHelper
 import com.app.smartscan.ocr.OcrHelper
 import com.app.smartscan.ocr.formatIngredientsSmart
+import com.app.smartscan.ui.auth.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import java.io.File
-
-
 
 class AiCameraActivity : ComponentActivity() {
 
@@ -85,6 +78,8 @@ class AiCameraActivity : ComponentActivity() {
 @Composable
 fun CameraPreviewScreen(analysisType: String) {
     val context = LocalContext.current
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
+
     val coroutineScope = rememberCoroutineScope()
 
     val previewView = remember { PreviewView(context) }
@@ -212,55 +207,31 @@ fun CameraPreviewScreen(analysisType: String) {
 
                                 val resultText = when (analysisType) {
                                     "ocr" -> {
-                                        try {
-                                            val ocr = OcrHelper(context)
-                                            val rawText = ocr.analyze(bitmap) // Run OCR once
-                                            val formattedText = formatIngredientsSmart(rawText) // Format detected text
-                                            formattedText
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "OCR failed: ${e.message}", e)
-                                            "OCR failed: ${e.message}"
-                                        }
+                                        val ocr = OcrHelper(context)
+                                        val rawText = ocr.analyze(bitmap)
+                                        formatIngredientsSmart(rawText)
                                     }
 
                                     "barcode" -> {
-                                        try {
-                                            val barcodeHelper = BarCodeHelper(context)
-                                            val result = barcodeHelper.decode(bitmap)
-
-                                            // Check if anything was detected
-                                            if (result.isNullOrBlank()) {
-                                                Log.w("AiCamera", "No barcode detected in image.")
-                                                "No barcode detected. Please try again with better lighting or focus."
-                                            } else {
-                                                Log.d("AiCamera", "Barcode detected: $result")
-                                                "Detected barcode: $result"
-                                            }
-
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "Barcode scanning failed: ${e.message}", e)
-                                            "Barcode scanning failed: ${e.message}"
-                                        }
+                                        val barcodeHelper = BarCodeHelper(context)
+                                        barcodeHelper.decode(bitmap) ?: ""
                                     }
 
+                                    "skin" -> analyzeSkinTypeFromBitmap(bitmap)
 
-                                    "skin" -> {
-                                        try {
-                                            // Kör samma analys som i SkinAnalyzerActivity
-                                            val result = analyzeSkinTypeFromBitmap(bitmap)
-
-                                            Log.d("AiCamera", "Skin analysis complete")
-                                            result
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "Skin analysis failed: ${e.message}", e)
-                                            "Skin analysis failed: ${e.message}"
-                                        }
-                                    }
-
-
-                                    else -> "Unknown analysis type: $analysisType"
+                                    else -> "Unknown analysis type"
                                 }
 
+                                val uid = FirebaseAuth.getInstance().currentUser?.uid
+                                if (uid != null) {
+                                    when (analysisType) {
+                                        "ocr" -> viewModel.saveOcrScan(resultText)
+                                        "skin" -> viewModel.saveSkinScan(resultText)
+                                        "barcode" -> viewModel.saveBarcodeScan(resultText)
+                                    }
+                                } else {
+                                    Log.e("AiCamera", "User not logged in — cannot save scan")
+                                }
 
                                 val intent = Intent(context, ResultActivity::class.java).apply {
                                     putExtra("TYPE", analysisType.uppercase())

@@ -1,5 +1,6 @@
 package com.app.smartscan.frontendScreens
 
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.navigation.NavType
@@ -7,34 +8,66 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.app.smartscan.ui.SplashScreen // från Shaheras version
+import com.app.smartscan.aiCamera.AiCameraActivity
+import com.app.smartscan.ui.SplashScreen
 
 @Composable
 fun FrontendNavGraph() {
     val navController = rememberNavController()
 
-    // 🔹 Spara om användaren har skapat konto
+    // ✅ Lokalt state (som du hade innan)
     var accountCreated by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
 
-    // 🔹 Startar med Splash (från Shahera)
+    // ✅ START: Splash
     NavHost(navController = navController, startDestination = "splash") {
 
-        // Splash Screen shahera
+        // 1) Splash ➜ Welcome
         composable("splash") {
-            SplashScreen(navController)
-        }
+            SplashScreen(
 
-        // Questionnaire
-        composable("questionnaire") {
-            QuestionnaireScreen(
-                onFinish = { allAnswered ->
-                    navController.navigate("home?completed=$allAnswered")
+                onTimeout = {
+                    navController.navigate("welcome") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
             )
         }
 
-        // Home
+        // 2) Welcome med två val: frågor eller skin-scan
+        composable("welcome") {
+            WelcomeScreen(
+                onStartQuestions = {
+                    // ➜ Frågesidan
+                    navController.navigate("questionnaire")
+                },
+                onStartSkinScan = { context ->
+                    // ➜ Starta hud-kameran
+                    val intent = Intent(context, AiCameraActivity::class.java)
+                        .putExtra("analysis_type", "skin")
+                    context.startActivity(intent)
+
+                    // ➜ Efter scan: till profil
+                    navController.navigate("home?completed=true") {
+                        popUpTo("welcome") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // 3) Frågor ➜ när klar: Profile
+        composable("questionnaire") {
+            QuestionnaireScreen(
+                onFinish = { allAnswered ->
+                    Log.d("FrontendNavGraph", "Questionnaire completed: $allAnswered")
+                    navController.navigate("home?completed=$allAnswered") {
+                        popUpTo("welcome") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // 4) Profile (Home) – oförändrad logik
         composable(
             "home?completed={completed}",
             arguments = listOf(
@@ -52,11 +85,13 @@ fun FrontendNavGraph() {
                 accountCreated = accountCreated,
                 onCreateAccount = { navController.navigate("createAccount") },
                 onProfile = { navController.navigate("profile/$userName") },
-                onScanProduct = { /* TODO: scan later */ }
+                onScanProduct = {
+                    // (din produktkamera/placeholder triggas inne i Home/profil – låt vara)
+                }
             )
         }
 
-        // Create Account
+        // Create account ➜ gå till profil (samma som du hade)
         composable("createAccount") {
             CreateAccountScreen(
                 onBack = { navController.popBackStack() },
@@ -70,7 +105,7 @@ fun FrontendNavGraph() {
             )
         }
 
-        // Profile
+        // Profil + favoriter/blacklist – oförändrat
         composable(
             route = "profile/{name}",
             arguments = listOf(navArgument("name") { type = NavType.StringType })
@@ -84,14 +119,7 @@ fun FrontendNavGraph() {
             )
         }
 
-        // Favorites
-        composable("favorites") {
-            FavoritesScreen(onBack = { navController.popBackStack() })
-        }
-
-        // Blacklist
-        composable("blacklist") {
-            BlacklistScreen(onBack = { navController.popBackStack() })
-        }
+        composable("favorites") { FavoritesScreen(onBack = { navController.popBackStack() }) }
+        composable("blacklist") { BlacklistScreen(onBack = { navController.popBackStack() }) }
     }
 }

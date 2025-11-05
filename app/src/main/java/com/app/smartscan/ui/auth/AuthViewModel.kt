@@ -175,6 +175,28 @@ class AuthViewModel(
             }
         }
     }
+    fun saveOcrScan(text: String) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUser?.uid ?: return@launch
+            scanRepository.createScan(uid, null, text)
+        }
+    }
+
+    fun saveSkinScan(text: String) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUser?.uid ?: return@launch
+            scanRepository.createScan(uid, null, text)
+        }
+    }
+
+    fun saveBarcodeScan(barcode: String) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUser?.uid ?: return@launch
+            scanRepository.createScan(uid, barcode, null) // save scan
+            onFetchProductClicked(barcode) // continue backend pipeline
+        }
+    }
+
 
     // Factory to create the ViewModel with its dependencies
     companion object {
