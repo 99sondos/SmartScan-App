@@ -19,8 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.smartscan.BuildConfig
 import com.app.smartscan.aiCamera.AiCameraActivity
+import com.app.smartscan.ui.auth.AuthViewModel
 import com.app.smartscan.ui.theme.SmartScanTheme
 import kotlinx.coroutines.*
 import okhttp3.*
@@ -58,7 +60,7 @@ class SkinAnalyzerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SkinAnalyzerScreen() {
+fun SkinAnalyzerScreen(authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -98,6 +100,20 @@ fun SkinAnalyzerScreen() {
 
                                 Log.d("SkinAnalyzer", "Analysis complete.")
                                 resultText = analysis
+
+                                // BACKEND INTEGRATION---
+                                // Parse the skin type from the result and save it to the user's profile
+                                val skinTypeFromAnalysis = analysis.lines()
+                                    .find { it.startsWith("Skin type:") }?.substringAfter("Skin type:")?.trim()
+
+                                if (skinTypeFromAnalysis != null) {
+                                    authViewModel.updateUserSkinTypeFromAnalysis(skinTypeFromAnalysis)
+                                    Log.d("SkinAnalyzer", "Successfully saved '$skinTypeFromAnalysis' to user profile.")
+                                } else {
+                                    Log.w("SkinAnalyzer", "Could not parse skin type from analysis result.")
+                                }
+                                // ---END OF INTEGRATION---
+
                             } catch (e: Exception) {
                                 resultText = "Error during analysis: ${e.message}"
                                 Toast.makeText(context, "Analysis failed.", Toast.LENGTH_SHORT).show()

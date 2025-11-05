@@ -164,6 +164,42 @@ class AuthViewModel(
         }
     }
 
+    fun onQuestionnaireSubmitted(
+        skinType: String,
+        isSensitive: Boolean,
+        ageRange: String,
+        allergies: List<String>
+    ) {
+        viewModelScope.launch {
+            try {
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                _uiState.update { it.copy(message = "Saving profile...") }
+                userRepository.updateUserQuestionnaire(
+                    uid = uid,
+                    skinType = skinType,
+                    isSensitive = isSensitive,
+                    ageRange = ageRange,
+                    allergies = allergies
+                )
+                _uiState.update { it.copy(message = "Profile updated successfully!") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error updating profile: ${e.message}") }
+            }
+        }
+    }
+
+    fun updateUserSkinTypeFromAnalysis(analyzedSkinType: String) {
+        viewModelScope.launch {
+            try {
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                userRepository.upsertUser(uid, UserProfile(skinType = analyzedSkinType))
+                _uiState.update { it.copy(message = "User profile updated with AI skin analysis.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error saving skin analysis: ${e.message}") }
+            }
+        }
+    }
+
     fun onSeedAllergiesClicked() {
         viewModelScope.launch {
             try {
