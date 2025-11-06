@@ -150,6 +150,22 @@ class AuthViewModel(
         }
     }
 
+    fun onOcrScanClicked(ocrText: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(message = "Creating OCR scan...") }
+            try {
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                // For OCR, we just create a scan document with the ocrText.
+                val scanId = scanRepository.createScan(uid, null, ocrText)
+
+                _uiState.update { it.copy(message = "OCR Scan created.", scanId = scanId) }
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error creating OCR scan: ${e.message}") }
+            }
+        }
+    }
+
     fun onGenerateExplanationClicked(scanId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(message = "Generating explanation...") }
