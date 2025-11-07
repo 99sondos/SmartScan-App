@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
-import com.app.smartscan.ResultActivity
 import com.app.smartscan.analysis.analyzeSkinTypeFromBitmap
 import com.app.smartscan.ocr.BarCodeHelper
 import com.app.smartscan.ocr.OcrHelper
@@ -60,22 +59,13 @@ import com.app.smartscan.ocr.formatIngredientsSmart
 import kotlinx.coroutines.launch
 import java.io.File
 
-
-
 class AiCameraActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (checkSelfPermission(android.Manifest.permission.CAMERA)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 0)
         }
-
         val analysisType = intent.getStringExtra("analysis_type") ?: "ocr"
-        Log.d("AiCamera", "Started with analysis type: $analysisType")
-
         setContent {
             CameraPreviewScreen(analysisType = analysisType)
         }
@@ -86,21 +76,15 @@ class AiCameraActivity : ComponentActivity() {
 fun CameraPreviewScreen(analysisType: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
     val previewView = remember { PreviewView(context) }
     val imageCapture = remember { ImageCapture.Builder().build() }
-
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
+    val galleryLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             try {
                 val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                 capturedBitmap = bitmap
-                Toast.makeText(context, "Gallery image loaded", Toast.LENGTH_SHORT).show()
-                Log.d("AiCamera", "Gallery image loaded successfully")
             } catch (e: Exception) {
                 Log.e("AiCamera", "Gallery load failed: ${e.message}", e)
             }
@@ -112,19 +96,12 @@ fun CameraPreviewScreen(analysisType: String) {
         cameraProviderFuture.addListener({
             try {
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = androidx.camera.core.Preview.Builder().build().also {
+                val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
-                val cameraSelector = androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
-
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    context as ComponentActivity,
-                    cameraSelector,
-                    preview,
-                    imageCapture
-                )
-                Log.d("AiCamera", "Camera initialized successfully")
+                cameraProvider.bindToLifecycle(context as ComponentActivity, cameraSelector, preview, imageCapture)
             } catch (e: Exception) {
                 Log.e("AiCamera", "Camera initialization failed: ${e.message}", e)
             }
@@ -133,145 +110,60 @@ fun CameraPreviewScreen(analysisType: String) {
 
     if (capturedBitmap == null) {
         Box(modifier = Modifier.fillMaxSize()) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { previewView }
-            )
-
+            AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
             Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 32.dp)
-                    .clip(CircleShape)
-                    .background(Color.DarkGray.copy(alpha = 0.2f))
-                    .border(3.dp, Color.White, CircleShape)
-                    .clickable {
-                        captureImage(imageCapture, context) { bitmap ->
-                            capturedBitmap = bitmap
-                        }
-                    },
+                modifier = Modifier.size(80.dp).align(Alignment.BottomCenter).padding(bottom = 32.dp).clip(CircleShape)
+                    .background(Color.DarkGray.copy(alpha = 0.2f)).border(3.dp, Color.White, CircleShape)
+                    .clickable { captureImage(imageCapture, context) { bitmap -> capturedBitmap = bitmap } },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Camera,
-                    contentDescription = "Capture",
-                    tint = Color.DarkGray,
-                    modifier = Modifier.size(36.dp)
-                )
+                Icon(imageVector = Icons.Default.Camera, contentDescription = "Capture", tint = Color.DarkGray, modifier = Modifier.size(36.dp))
             }
-
             Icon(
-                imageVector = Icons.Default.Image,
-                contentDescription = "Open Gallery",
-                tint = Color.DarkGray,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 32.dp, bottom = 32.dp)
-                    .size(32.dp)
+                imageVector = Icons.Default.Image, contentDescription = "Open Gallery", tint = Color.DarkGray,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 32.dp).size(32.dp)
                     .clickable { galleryLauncher.launch("image/*") }
             )
         }
     } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            Image(
-                bitmap = capturedBitmap!!.asImageBitmap(),
-                contentDescription = "Captured Image",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Image(bitmap = capturedBitmap!!.asImageBitmap(), contentDescription = "Captured Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Retake",
-                tint = Color.DarkGray,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 32.dp, bottom = 32.dp)
-                    .size(40.dp)
+                imageVector = Icons.Default.Refresh, contentDescription = "Retake", tint = Color.DarkGray,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 32.dp).size(40.dp)
                     .clickable { capturedBitmap = null }
             )
-
             Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Use Image",
-                tint = Color.DarkGray,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 32.dp, bottom = 32.dp)
-                    .size(40.dp)
+                imageVector = Icons.Default.Check, contentDescription = "Use Image", tint = Color.DarkGray,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = 32.dp).size(40.dp)
                     .clickable {
                         val bitmap = capturedBitmap ?: return@clickable
                         coroutineScope.launch {
                             try {
-                                Log.d("AiCamera", "Running analysis: $analysisType")
-
                                 val resultText = when (analysisType) {
                                     "ocr" -> {
-                                        try {
-                                            val ocr = OcrHelper(context)
-                                            val rawText = ocr.analyze(bitmap) // Run OCR once
-                                            val formattedText = formatIngredientsSmart(rawText) // Format detected text
-                                            formattedText
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "OCR failed: ${e.message}", e)
-                                            "OCR failed: ${e.message}"
-                                        }
+                                        val ocr = OcrHelper(context)
+                                        val rawText = ocr.analyze(bitmap)
+                                        formatIngredientsSmart(rawText)
                                     }
-
                                     "barcode" -> {
-                                        try {
-                                            val barcodeHelper = BarCodeHelper(context)
-                                            val result = barcodeHelper.decode(bitmap)
-
-                                            // Check if anything was detected
-                                            if (result.isNullOrBlank()) {
-                                                Log.w("AiCamera", "No barcode detected in image.")
-                                                "No barcode detected. Please try again with better lighting or focus."
-                                            } else {
-                                                Log.d("AiCamera", "Barcode detected: $result")
-                                                "Detected barcode: $result"
-                                            }
-
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "Barcode scanning failed: ${e.message}", e)
-                                            "Barcode scanning failed: ${e.message}"
-                                        }
+                                        val barcodeHelper = BarCodeHelper(context)
+                                        val result = barcodeHelper.decode(bitmap)
+                                        if (result.isNullOrBlank()) "No barcode detected." else result
                                     }
-
-
                                     "skin" -> {
-                                        try {
-                                            // Kör samma analys som i SkinAnalyzerActivity
-                                            val result = analyzeSkinTypeFromBitmap(bitmap)
-
-                                            Log.d("AiCamera", "Skin analysis complete")
-                                            result
-                                        } catch (e: Exception) {
-                                            Log.e("AiCamera", "Skin analysis failed: ${e.message}", e)
-                                            "Skin analysis failed: ${e.message}"
-                                        }
+                                        analyzeSkinTypeFromBitmap(bitmap)
                                     }
-
-
                                     else -> "Unknown analysis type: $analysisType"
                                 }
-
-
-                                val intent = Intent(context, ResultActivity::class.java).apply {
-                                    putExtra("TYPE", analysisType.uppercase())
-                                    putExtra("RESULT", resultText)
+                                val resultIntent = Intent().apply {
+                                    putExtra("analysis_type", analysisType)
+                                    putExtra("result_text", resultText)
                                 }
-                                context.startActivity(intent)
-                                (context as ComponentActivity).finish()
-
+                                (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
+                                (context as Activity).finish()
                             } catch (e: Exception) {
                                 Log.e("AiCamera", "Analysis error: ${e.message}", e)
-                                Toast.makeText(context, "Analysis failed: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -280,50 +172,27 @@ fun CameraPreviewScreen(analysisType: String) {
     }
 }
 
-fun captureImage(
-    imageCapture: ImageCapture,
-    context: Context,
-    onBitmapCaptured: (Bitmap) -> Unit
-) {
+fun captureImage(imageCapture: ImageCapture, context: Context, onBitmapCaptured: (Bitmap) -> Unit) {
     val photoFile = File(context.cacheDir, "ai_capture_${System.currentTimeMillis()}.jpg")
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-    imageCapture.takePicture(
-        outputOptions,
-        ContextCompat.getMainExecutor(context),
+    imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
-
             override fun onError(exc: ImageCaptureException) {
-                Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
                 Log.e("AiCamera", "Capture failed: ${exc.message}", exc)
             }
-
             override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                 try {
                     val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
                     val exif = ExifInterface(photoFile.absolutePath)
-                    val orientation = exif.getAttributeInt(
-                        ExifInterface.TAG_ORIENTATION,
-                        ExifInterface.ORIENTATION_NORMAL
-                    )
-
+                    val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
                     val matrix = android.graphics.Matrix()
                     when (orientation) {
                         ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
                         ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
                         ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
                     }
-
-                    val rotatedBitmap = Bitmap.createBitmap(
-                        bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-                    )
-
-                    (context as ComponentActivity).runOnUiThread {
-                        onBitmapCaptured(rotatedBitmap)
-                    }
-
-                    Toast.makeText(context, "Image captured", Toast.LENGTH_SHORT).show()
-                    Log.d("AiCamera", "Image captured and rotated correctly")
+                    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    (context as ComponentActivity).runOnUiThread { onBitmapCaptured(rotatedBitmap) }
                 } catch (e: Exception) {
                     Log.e("AiCamera", "onImageSaved failed: ${e.message}", e)
                 }

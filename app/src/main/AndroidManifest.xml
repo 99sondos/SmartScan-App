@@ -38,23 +38,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Skin Analyzer -->
-        <activity
-            android:name=".analysis.SkinAnalyzerActivity"
-            android:exported="true"
-            android:label="Skin Analyzer" />
-
         <!-- AI Camera Activity -->
         <activity
             android:name=".aiCamera.AiCameraActivity"
             android:exported="true"
             android:label="Camera Test" />
-
-        <!-- Result Activity -->
-        <activity
-            android:name=".ResultActivity"
-            android:exported="true"
-            android:label="Result" />
 
         <!-- FileProvider (for saving + sharing captured images) -->
         <provider

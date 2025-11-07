@@ -1,6 +1,7 @@
 package com.app.smartscan.data
 
 import com.app.smartscan.data.model.UserProfile
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
@@ -58,5 +59,15 @@ class UserRepository(private val db: FirebaseFirestore) {
             allergies = allergies
         )
         db.collection(FsPaths.USERS).document(uid).set(questionnaireData, SetOptions.merge()).await()
+    }
+
+    suspend fun addToFavorites(uid: String, barcode: String) {
+        db.collection(FsPaths.USERS).document(uid)
+            .update("favorites", FieldValue.arrayUnion(barcode)).await()
+    }
+
+    suspend fun addToBlacklist(uid: String, barcode: String) {
+        db.collection(FsPaths.USERS).document(uid)
+            .update("blacklist", FieldValue.arrayUnion(barcode)).await()
     }
 }

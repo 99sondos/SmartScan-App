@@ -102,16 +102,8 @@ fun SkinAnalyzerScreen(authViewModel: AuthViewModel = viewModel(factory = AuthVi
                                 resultText = analysis
 
                                 // BACKEND INTEGRATION---
-                                // Parse the skin type from the result and save it to the user's profile
-                                val skinTypeFromAnalysis = analysis.lines()
-                                    .find { it.startsWith("Skin type:") }?.substringAfter("Skin type:")?.trim()
-
-                                if (skinTypeFromAnalysis != null) {
-                                    authViewModel.updateUserSkinTypeFromAnalysis(skinTypeFromAnalysis)
-                                    Log.d("SkinAnalyzer", "Successfully saved '$skinTypeFromAnalysis' to user profile.")
-                                } else {
-                                    Log.w("SkinAnalyzer", "Could not parse skin type from analysis result.")
-                                }
+                                authViewModel.updateUserSkinTypeFromAnalysis(analysis)
+                                Log.d("SkinAnalyzer", "Successfully saved analysis to user profile.")
                                 // ---END OF INTEGRATION---
 
                             } catch (e: Exception) {
@@ -228,7 +220,7 @@ suspend fun analyzeSkinTypeFromBitmap(
                     Std deviation: ${"%.2f".format(stdDev)}
 
                     ⚠ No API key found – AI feedback unavailable.
-                """.trimIndent()
+                """
             }
 
             val client = OkHttpClient.Builder()
@@ -246,7 +238,7 @@ suspend fun analyzeSkinTypeFromBitmap(
                 Brightness variation: ${"%.2f".format(stdDev)}
                 
                 Give a short summary describing the skin condition and 1–2 skincare suggestions (max 3 sentences).
-            """.trimIndent()
+            """".trimIndent()
 
             val json = JSONObject().apply {
                 put("model", "gpt-4o-mini")
@@ -295,7 +287,7 @@ suspend fun analyzeSkinTypeFromBitmap(
 
                  AI feedback:
                 $aiText
-            """.trimIndent()
+            """
 
         } catch (e: Exception) {
             Log.e("SkinAnalyzer", "OpenAI error: ${e.message}", e)

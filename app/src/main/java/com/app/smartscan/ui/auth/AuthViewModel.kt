@@ -5,20 +5,19 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.app.smartscan.data.*
+import com.app.smartscan.data.model.Scan
 import com.app.smartscan.data.model.UserProfile
-import com.app.smartscan.data.seed.AllergySeeder
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-/**
- * Data class to hold the state for the authentication screen.
- */
 data class AuthUiState(
     val fullName: String = "",
     val username: String = "",
@@ -26,62 +25,64 @@ data class AuthUiState(
     val password: String = "",
     val message: String = "",
     val isSignedIn: Boolean = false,
-    val scanId: String? = null // Add this to hold the current scan ID
+    val isAnonymous: Boolean = true, // Track guest status
+    val scanId: String? = null
 )
 
-/**
- * ViewModel for the authentication screen.
- */
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val productRepository: ProductRepository,
     private val scanRepository: ScanRepository,
-    private val functions: FirebaseFunctions,
-    private val db: FirebaseFirestore
+    private val functions: FirebaseFunctions
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Check the initial sign-in state
-        val currentUser = authRepository.currentUser
-        _uiState.update { it.copy(isSignedIn = currentUser != null, message = if(currentUser != null) "Signed in as ${currentUser.email}" else "Signed out") }
+        signInAnonymouslyIfNeeded()
     }
 
-    fun onFullNameChange(fullName: String) {
-        _uiState.update { it.copy(fullName = fullName) }
+    private fun signInAnonymouslyIfNeeded() {
+        viewModelScope.launch {
+            val currentUser = authRepository.currentUser
+            if (currentUser == null) {
+                try {
+                    val guestUser = authRepository.signInAnonymously()
+                    _uiState.update { it.copy(
+                        isSignedIn = true, 
+                        isAnonymous = guestUser.isAnonymous, 
+                        message = "Signed in as guest."
+                    ) }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isSignedIn = false, message = "Guest sign-in failed: ${e.message}") }
+                }
+            } else {
+                _uiState.update { it.copy(
+                    isSignedIn = true, 
+                    isAnonymous = currentUser.isAnonymous, 
+                    message = "Signed in as ${currentUser.email ?: "guest"}"
+                ) }
+            }
+        }
     }
 
-    fun onUsernameChange(username: String) {
-        _uiState.update { it.copy(username = username) }
-    }
-
-    fun onEmailChange(email: String) {
-        _uiState.update { it.copy(email = email) }
-    }
-
-    fun onPasswordChange(password: String) {
-        _uiState.update { it.copy(password = password) }
-    }
+    fun onFullNameChange(fullName: String) { _uiState.update { it.copy(fullName = fullName) } }
+    fun onUsernameChange(username: String) { _uiState.update { it.copy(username = username) } }
+    fun onEmailChange(email: String) { _uiState.update { it.copy(email = email) } }
+    fun onPasswordChange(password: String) { _uiState.update { it.copy(password = password) } }
 
     fun onSignUpClicked() {
         viewModelScope.launch {
             try {
-                val user = authRepository.signUp(
-                    _uiState.value.email,
-                    _uiState.value.password,
-                    _uiState.value.fullName,
-                    _uiState.value.username
-                )
-                _uiState.update {
-                    it.copy(
-                        message = "Sign up successful: ${user.email}",
-                        isSignedIn = true,
-                        password = "" // Clear password field for security
-                    )
-                }
+                val user = authRepository.signUp(_uiState.value.email, _uiState.value.password, _uiState.value.fullName, _uiState.value.username)
+                _uiState.update { it.copy(
+                    message = "Sign up successful: ${user.email}", 
+                    isSignedIn = true, 
+                    isAnonymous = user.isAnonymous,
+                    password = ""
+                ) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error: ${e.message}") }
             }
@@ -92,13 +93,12 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 val user = authRepository.signIn(_uiState.value.email, _uiState.value.password)
-                _uiState.update {
-                    it.copy(
-                        message = "Sign in successful: ${user.email}",
-                        isSignedIn = true,
-                        password = "" // Clear password field for security
-                    )
-                }
+                _uiState.update { it.copy(
+                    message = "Sign in successful: ${user.email}", 
+                    isSignedIn = true, 
+                    isAnonymous = user.isAnonymous,
+                    password = ""
+                ) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error: ${e.message}") }
             }
@@ -106,44 +106,27 @@ class AuthViewModel(
     }
 
     fun onSignOutClicked() {
-        authRepository.signOut()
-        _uiState.value = AuthUiState(message = "Signed out")
+        viewModelScope.launch {
+            authRepository.signOut()
+            signInAnonymouslyIfNeeded()
+        }
     }
 
     fun onFetchProductClicked(barcode: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(message = "Fetching product...") }
             try {
-                // Step 1: Call the Cloud Function to fetch the product.
                 val data = mapOf("barcode" to barcode)
-                val result = functions.getHttpsCallable("fetchProductFromOBF").call(data).await()
-                val resultMap = result.data as? Map<*, *>
-
-                if (resultMap?.get("found") != true) {
-                    throw Exception("Product not found in OpenBeautyFacts.")
-                }
-
-                // Step 2: Get the user and product data from repositories.
+                functions.getHttpsCallable("fetchProductFromOBF").call(data).await()
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
-                val userProfile = userRepository.getUser(uid) ?: UserProfile() // Assume default if null
+                val userProfile = userRepository.getUser(uid) ?: UserProfile()
                 val product = productRepository.getProduct(barcode) ?: throw Exception("Product not found after fetch")
-
-                // Step 3: Create the initial scan document.
                 val scanId = scanRepository.createScan(uid, barcode, null)
-
-                // Step 4: Compute flags by comparing ingredients with user's lists.
                 val userLists = userProfile.allergies + userProfile.blacklist
-                val flags = product.ingredients.filter { ingredient ->
-                    userLists.any { userListItem ->
-                        ingredient.contains(userListItem, ignoreCase = true)
-                    }
-                }
-
-                // Step 5: Update the scan with the computed flags.
+                val flags = product.ingredients.filter { ingredient -> userLists.any { userListItem -> ingredient.contains(userListItem, ignoreCase = true) } }
                 scanRepository.updateScanFlags(scanId, flags)
-
-                _uiState.update { it.copy(message = "Scan created with ${flags.size} flags.", scanId = scanId) }
-
+                _uiState.update { it.copy(message = "Scan created. Triggering explanation...", scanId = scanId) }
+                triggerExplanationGeneration(scanId)
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Function error: ${e.message}") }
             }
@@ -155,48 +138,35 @@ class AuthViewModel(
             _uiState.update { it.copy(message = "Creating OCR scan...") }
             try {
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
-                // For OCR, we just create a scan document with the ocrText.
                 val scanId = scanRepository.createScan(uid, null, ocrText)
-
-                _uiState.update { it.copy(message = "OCR Scan created.", scanId = scanId) }
-
+                _uiState.update { it.copy(message = "OCR Scan created. Triggering explanation...", scanId = scanId) }
+                triggerExplanationGeneration(scanId)
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error creating OCR scan: ${e.message}") }
             }
         }
     }
 
-    fun onGenerateExplanationClicked(scanId: String) {
+    private fun triggerExplanationGeneration(scanId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(message = "Generating explanation...") }
             try {
                 val data = mapOf("scanId" to scanId)
-                val result = functions.getHttpsCallable("generateExplanation").call(data).await()
-                val resultMap = result.data as? Map<*, *>
-                _uiState.update { it.copy(message = "Explanation result: $resultMap") }
+                functions.getHttpsCallable("generateExplanation").call(data).await()
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "Explanation error: ${e.message}") }
+                _uiState.update { it.copy(message = "Explanation trigger error: ${e.message}") }
             }
         }
     }
 
-    fun onQuestionnaireSubmitted(
-        skinType: String,
-        isSensitive: Boolean,
-        ageRange: String,
-        allergies: List<String>
-    ) {
+    fun observeScan(scanId: String): Flow<Scan?> {
+        return scanRepository.observeScan(scanId)
+    }
+    
+    fun onQuestionnaireSubmitted(skinType: String, isSensitive: Boolean, ageRange: String, allergies: List<String>) {
         viewModelScope.launch {
             try {
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
-                _uiState.update { it.copy(message = "Saving profile...") }
-                userRepository.updateUserQuestionnaire(
-                    uid = uid,
-                    skinType = skinType,
-                    isSensitive = isSensitive,
-                    ageRange = ageRange,
-                    allergies = allergies
-                )
+                userRepository.updateUserQuestionnaire(uid, skinType, isSensitive, ageRange, allergies)
                 _uiState.update { it.copy(message = "Profile updated successfully!") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error updating profile: ${e.message}") }
@@ -204,11 +174,13 @@ class AuthViewModel(
         }
     }
 
-    fun updateUserSkinTypeFromAnalysis(analyzedSkinType: String) {
+    fun updateUserSkinTypeFromAnalysis(analysisResult: String) {
         viewModelScope.launch {
             try {
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
-                userRepository.upsertUser(uid, UserProfile(skinType = analyzedSkinType))
+                val existingProfile = userRepository.getUser(uid) ?: UserProfile()
+                val updatedProfile = existingProfile.copy(skinType = analysisResult)
+                userRepository.upsertUser(uid, updatedProfile)
                 _uiState.update { it.copy(message = "User profile updated with AI skin analysis.") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error saving skin analysis: ${e.message}") }
@@ -216,24 +188,34 @@ class AuthViewModel(
         }
     }
 
-    fun onSeedAllergiesClicked() {
+    fun onAddToFavoritesClicked(barcode: String) {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(message = "Seeding allergies...") }
-                AllergySeeder.seed(db)
-                _uiState.update { it.copy(message = "Allergies seeded successfully!") }
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                userRepository.addToFavorites(uid, barcode)
+                _uiState.update { it.copy(message = "Added to favorites.") }
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "Error seeding allergies: ${e.message}") }
+                _uiState.update { it.copy(message = "Error adding to favorites: ${e.message}") }
             }
         }
     }
 
-    // Factory to create the ViewModel with its dependencies
+    fun onAddToBlacklistClicked(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
+                userRepository.addToBlacklist(uid, barcode)
+                _uiState.update { it.copy(message = "Added to blacklist.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error adding to blacklist: ${e.message}") }
+            }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-                // This is a simple service locator pattern. For a larger app, you'd use Hilt or Koin.
                 val auth = FirebaseAuth.getInstance()
                 val db = FirebaseFirestore.getInstance()
                 val functions = FirebaseFunctions.getInstance("europe-west1")
@@ -242,12 +224,11 @@ class AuthViewModel(
                 val productRepository = ProductRepository(db)
                 val scanRepository = ScanRepository(db)
                 return AuthViewModel(
-                    authRepository,
-                    userRepository,
-                    productRepository,
-                    scanRepository,
-                    functions,
-                    db
+                    authRepository, 
+                    userRepository, 
+                    productRepository, 
+                    scanRepository, 
+                    functions
                 ) as T
             }
         }

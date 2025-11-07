@@ -1,8 +1,23 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.gms.google-services")
+}
+
+// Helper function to safely get a property from local.properties
+fun getApiKey(property: String): String {
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(FileInputStream(localPropertiesFile))
+    } else {
+        throw GradleException("local.properties not found. Please add it and sync Gradle.")
+    }
+    return localProperties.getProperty(property)?.trim('"') ?: throw GradleException("$property not found in local.properties. Please add it and sync Gradle.")
 }
 
 android {
@@ -17,11 +32,11 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Keep this from the main branch
+        // Get the key using the new, safe helper function
         buildConfigField(
             "String",
             "OPENAI_API_KEY",
-            "\"${project.findProperty("OPENAI_API_KEY") ?: ""}\""
+            "\"" + getApiKey("OPENAI_API_KEY") + "\""
         )
     }
 
@@ -82,6 +97,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.0-beta01")
     implementation("androidx.compose.material:material-icons-extended:1.7.0-beta01")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    implementation("androidx.navigation:navigation-compose:2.8.0-beta03")
 
     // CameraX and ML Kit dependencies from the main branch
     val camerax_version = "1.3.4"
