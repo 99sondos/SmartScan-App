@@ -74,6 +74,15 @@ class AuthViewModel(
     fun onEmailChange(email: String) { _uiState.update { it.copy(email = email) } }
     fun onPasswordChange(password: String) { _uiState.update { it.copy(password = password) } }
 
+    fun clearMessage() {
+        _uiState.update { it.copy(message = "") }
+    }
+
+    fun onResultScreenNavigated() {
+        _uiState.update { it.copy(scanId = null) }
+    }
+
+
     fun onSignUpClicked() {
         viewModelScope.launch {
             try {
@@ -115,21 +124,38 @@ class AuthViewModel(
 
     fun onFetchProductClicked(barcode: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(message = "Fetching product...") }
+            _uiState.update { it.copy(message = "Checking external database for product...") }
             try {
+                // Step 1: Call the function, which we know might fail silently.
                 val data = mapOf("barcode" to barcode)
                 functions.getHttpsCallable("fetchProductFromOBF").call(data).await()
+
+                // Step 2: DEFENSIVE CHECK. Verify the product was actually created in our database.
+                // We add a small delay to account for any Firestore propagation time.
+                kotlinx.coroutines.delay(1500) // 1.5 second delay
+                val product = productRepository.getProduct(barcode)
+
+                if (product == null) {
+                    // THE SILENT FAILURE HAPPENED. Show an error to the user.
+                    _uiState.update { it.copy(message = "Error: Product not found in the Open Beauty Facts database.") }
+                    // Crucially, we stop here and do not proceed.
+                    return@launch
+                }
+
+                // Step 3: If we are here, the product exists. Proceed as normal.
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
                 val userProfile = userRepository.getUser(uid) ?: UserProfile()
-                val product = productRepository.getProduct(barcode) ?: throw Exception("Product not found after fetch")
                 val scanId = scanRepository.createScan(uid, barcode, null)
                 val userLists = userProfile.allergies + userProfile.blacklist
                 val flags = product.ingredients.filter { ingredient -> userLists.any { userListItem -> ingredient.contains(userListItem, ignoreCase = true) } }
                 scanRepository.updateScanFlags(scanId, flags)
-                _uiState.update { it.copy(message = "Scan created. Triggering explanation...", scanId = scanId) }
+
+                _uiState.update { it.copy(message = "Product found! Generating your analysis...", scanId = scanId) }
                 triggerExplanationGeneration(scanId)
+
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "Function error: ${e.message}") }
+                // This will catch any *real* crashes or network errors.
+                _uiState.update { it.copy(message = "A network error occurred: ${e.message}") }
             }
         }
     }
@@ -218,9 +244,7 @@ class AuthViewModel(
         }
     }
 
-    fun clearMessage() {
-        _uiState.update { it.copy(message = "") }
-    }
+
 
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
