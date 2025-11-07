@@ -128,5 +128,38 @@ fun FrontendNavGraph() {
             )
         }
 
+        // 4. Favorites screen
+        composable("favorites") {
+            FavoriteListScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 5. Blacklist screen
+        composable("blacklist") {
+            BlacklistScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 6. Result screen
+        composable(
+            route = "result?imageUri={imageUri}",
+            arguments = listOf(
+                navArgument("imageUri") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val imageUri = backStackEntry.arguments?.getString("imageUri")
+            ResultScreen(
+                navController = navController,
+                imageUri = imageUri,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }
