@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,14 +8,27 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// THEIR REPOSITORIES BLOCK - THIS IS CRITICAL
 repositories {
     google()
     mavenCentral()
 }
 
+// HELPER FUNCTION
+fun getApiKey(property: String): String {
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(FileInputStream(localPropertiesFile))
+    } else {
+        throw GradleException("local.properties not found. Please add it and sync Gradle.")
+    }
+    return localProperties.getProperty(property)?.trim('"') ?: throw GradleException("$property not found in local.properties. Please add it and sync Gradle.")
+}
+
 android {
     namespace = "com.app.smartscan"
-    compileSdk = 34   // keep 34 until Android 15 SDK is installed
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.app.smartscan"
@@ -21,7 +37,26 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // API KEY LOGIC
+        buildConfigField(
+            "String",
+            "OPENAI_API_KEY",
+            "\"" + getApiKey("OPENAI_API_KEY") + "\""
+        )
     }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    // THEIR COMPILE OPTIONS
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions { jvmTarget = "11" }
 
     buildTypes {
         release {
@@ -32,53 +67,57 @@ android {
             )
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions { jvmTarget = "11" }
-
-    buildFeatures { compose = true }
-    // No composeOptions: kotlin 2.0 + compose plugin provides the compiler
 }
 
 dependencies {
-    // Firebase
+    // --- COMBINED DEPENDENCIES ---
+
+    // Firebase (using their BOM)
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
-    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
-    implementation("com.google.firebase:firebase-analytics-ktx:22.0.2")
-    implementation("com.google.firebase:firebase-firestore-ktx:25.1.1")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-functions-ktx")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // AndroidX / Compose (via version catalog)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-
-    // Jetpack Compose Navigation
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-
-    // Jetpack Compose UI
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-
-    // This is for Visibility / VisibilityOff icons CreateAccountScreen
+    // AndroidX / Compose (using their BOM and standard notation)
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Coil for the image of the product to show in the result
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.8.0-beta03")
+
+    // Coil for images (from their branch)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // CameraX and ML Kit (from our branch)
+    val camerax_version = "1.3.4"
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    // Networking (from our branch)
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    // Testing (Combined)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
