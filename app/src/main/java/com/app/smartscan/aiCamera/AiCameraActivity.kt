@@ -75,9 +75,9 @@ fun CameraPreviewScreen(analysisType: String) {
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+        uri?.let { imageUri ->
             try {
-                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
                 capturedBitmap = bitmap
             } catch (e: Exception) {
                 Log.e("AiCamera", "Gallery load failed: ${e.message}", e)
@@ -133,33 +133,37 @@ fun CameraPreviewScreen(analysisType: String) {
                         coroutineScope.launch {
                             try {
                                 val resultIntent = Intent()
-                                when (analysisType) {
-                                    "skin" -> {
-                                        val skinResult = analyzeSkinTypeFromBitmap(bitmap)
-                                        resultIntent.putExtra("skinAnalysisResult", skinResult)
-                                    }
-                                    "product" -> {
-                                        val barcodeHelper = BarCodeHelper(context)
-                                        val barcodeResult = barcodeHelper.decode(bitmap)
-                                        if (!barcodeResult.isNullOrBlank()) {
-                                            resultIntent.putExtra("barcode", barcodeResult)
-                                        } else {
-                                            val ocr = OcrHelper(context)
-                                            val rawText = ocr.analyze(bitmap)
-                                            val ocrResult = formatIngredientsSmart(rawText)
+                                if (analysisType == "skin") {
+                                    val skinResult = analyzeSkinTypeFromBitmap(bitmap)
+                                    resultIntent.putExtra("skinAnalysisResult", skinResult)
+                                    (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
+                                    context.finish()
+                                } else { // "product"
+                                    val barcodeHelper = BarCodeHelper(context)
+                                    val barcodeResult = barcodeHelper.decode(bitmap)
+                                    if (!barcodeResult.isNullOrBlank()) {
+                                        resultIntent.putExtra("barcode", barcodeResult)
+                                        (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
+                                        context.finish()
+                                    } else {
+                                        val ocr = OcrHelper(context)
+                                        val rawText = ocr.analyze(bitmap)
+                                        val ocrResult = formatIngredientsSmart(rawText)
+                                        if (ocrResult.split("\\s+".toRegex()).size > 3) {
                                             resultIntent.putExtra("ocrText", ocrResult)
                                             Toast.makeText(context, "No barcode found, used OCR.", Toast.LENGTH_SHORT).show()
+                                            (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
+                                            context.finish()
+                                        } else {
+                                            Toast.makeText(context, "No barcode or meaningful text found. Please try again.", Toast.LENGTH_LONG).show()
+                                            capturedBitmap = null
                                         }
                                     }
                                 }
-                                (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
-                                context.finish()
                             } catch (e: Exception) {
                                 Log.e("AiCamera", "Analysis error: ${e.message}", e)
                                 Toast.makeText(context, "Analysis failed: ${e.message}", Toast.LENGTH_LONG).show()
-                                // Corrected: Explicitly set the result to CANCELED before finishing
-                                (context as Activity).setResult(Activity.RESULT_CANCELED)
-                                (context as Activity).finish()
+                                capturedBitmap = null
                             }
                         }
                     }
