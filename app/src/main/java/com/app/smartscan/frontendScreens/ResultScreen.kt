@@ -2,37 +2,47 @@ package com.app.smartscan.frontendScreens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
-import com.app.smartscan.R
-
-// import androidx.compose.ui.tooling.preview.Preview
-
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.app.smartscan.R
+import com.app.smartscan.data.model.Product
+import com.app.smartscan.data.model.Scan
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun ResultScreen(
     navController: NavController,
-    imageUri: String?,
+    scanId: String?,
+    observeScan: (String) -> Flow<Scan?>,
+    getProduct: suspend (String) -> Product?,
+    isGuest: Boolean,
+    onAddToFavorites: (String) -> Unit,
+    onAddToBlacklist: (String) -> Unit,
     onBack: () -> Unit
-){
-//fun ResultScreen(
-//    imageUri: String?,
-//    onSaveFavorite: () -> Unit,
-//    onSaveBlacklist: () -> Unit,
-//    onBack: () -> Unit
-//) {
-    var productName by remember { mutableStateOf("") }
-    var productType by remember { mutableStateOf("") }
-    var compatibilitySummary by remember { mutableStateOf("") }
+) {
+    val scan by if (scanId != null) {
+        observeScan(scanId).collectAsState(initial = null)
+    } else {
+        remember { mutableStateOf(null) }
+    }
+
+    var product by remember { mutableStateOf<Product?>(null) }
+
+    LaunchedEffect(scan) {
+        scan?.productKey?.let {
+            product = getProduct(it)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -40,10 +50,8 @@ fun ResultScreen(
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = onBack) {
@@ -53,7 +61,6 @@ fun ResultScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // Logo
         Image(
             painter = painterResource(id = R.drawable.smartskin_logo),
             contentDescription = "App Logo",
@@ -62,69 +69,102 @@ fun ResultScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // Favorite / Blacklist buttons
-        Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-            IconButton(onClick = { navController.navigate("blacklist") }) {
-                Icon(painter = painterResource(R.drawable.ic_broken_heart), contentDescription = "Blacklist", tint = Color.Red)
+        if (scan == null || (scan?.productKey != null && product == null)) {
+            CircularProgressIndicator()
+            Spacer(Modifier.height(16.dp))
+            Text(text = if (scan == null) "Generating explanation..." else "Fetching product details...")
+        } else {
+            if (!isGuest && product?.barcode != null) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    IconButton(onClick = { product?.barcode?.let { onAddToBlacklist(it) } }) {
+                        Icon(painter = painterResource(R.drawable.ic_broken_heart), contentDescription = "Blacklist", tint = Color.Red)
+                    }
+                    IconButton(onClick = { product?.barcode?.let { onAddToFavorites(it) } }) {
+                        Icon(painter = painterResource(R.drawable.ic_heart), contentDescription = "Favorite", tint = Color.Red)
+                    }
+                }
             }
 
-            IconButton(onClick = { navController.navigate("favorites") }) {
-                Icon(painter = painterResource(R.drawable.ic_heart), contentDescription = "Favorite", tint = Color.Red)
-            }
+            OutlinedTextField(
+                value = product?.name ?: "N/A",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Product") },
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+            )
 
+            OutlinedTextField(
+                value = product?.category ?: "N/A",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Type") },
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+            )
 
-        // Product image if one exists
-        imageUri?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = "Product Image",
-                modifier = Modifier.size(150.dp)
+            val explanationText = scan?.explanation?.get("summary") as? String ?: "Loading..."
+            OutlinedTextField(
+                value = explanationText,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Skin Compatibility") },
+                modifier = Modifier.fillMaxWidth().height(130.dp).padding(top = 12.dp),
+                maxLines = 5
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "⚠️ AI-generated result — may contain errors.\nConsult a professional if unsure.",
+                color = Color.Red,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
 
-        // Product / Type fields
-        OutlinedTextField(
-            value = productName,
-            onValueChange = { productName = it },
-            label = { Text("Product") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-        )
-
-        OutlinedTextField(
-            value = productType,
-            onValueChange = { productType = it },
-            label = { Text("Type") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-        )
-
-        // Skin Compatibility Summary
-        OutlinedTextField(
-            value = compatibilitySummary,
-            onValueChange = { compatibilitySummary = it },
-            label = { Text("Skin Compatibility") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(130.dp)
-                .padding(top = 12.dp),
-            maxLines = 5
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "⚠️ AI-generated result — may contain errors.\nConsult a professional if unsure.",
-            color = Color.Red,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodySmall
+@Preview(showBackground = true, name = "Result Screen Loading")
+@Composable
+fun ResultScreenLoadingPreview() {
+    MaterialTheme {
+        ResultScreen(
+            navController = rememberNavController(),
+            scanId = "preview123",
+            observeScan = { flowOf(null) }, // Simulate loading scan
+            getProduct = { null },
+            isGuest = true,
+            onAddToFavorites = {},
+            onAddToBlacklist = {},
+            onBack = {}
         )
     }
 }
+
+@Preview(showBackground = true, name = "Result Screen Registered")
+@Composable
+fun ResultScreenRegisteredPreview() {
+    val previewScan = Scan(
+        productKey = "12345",
+        explanation = mapOf("summary" to "This is a preview explanation.")
+    )
+    val previewProduct = Product(
+        name = "Super Glow Serum",
+        category = "Serum",
+        barcode = "12345"
+    )
+    MaterialTheme {
+        ResultScreen(
+            navController = rememberNavController(),
+            scanId = "preview123",
+            observeScan = { flowOf(previewScan) },
+            getProduct = { previewProduct },
+            isGuest = false,
+            onAddToFavorites = {},
+            onAddToBlacklist = {},
+            onBack = {}
+        )
+    }
 }
-
-
-
-

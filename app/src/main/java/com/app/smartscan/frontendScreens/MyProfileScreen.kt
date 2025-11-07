@@ -2,6 +2,7 @@ package com.app.smartscan.frontendScreens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -12,7 +13,8 @@ import androidx.compose.ui.unit.dp
 fun MyProfileScreen(
     onScanProduct: () -> Unit,
     onViewMyProducts: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSignOut: () -> Unit // New parameter
 ) {
     Column(
         modifier = Modifier
@@ -39,6 +41,12 @@ fun MyProfileScreen(
 
         Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text("Back")
+        }
+
+        Spacer(modifier = Modifier.weight(1f)) // Pushes sign out to bottom
+
+        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+            Text("Sign Out")
         }
     }
 }

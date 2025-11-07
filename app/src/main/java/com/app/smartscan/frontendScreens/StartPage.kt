@@ -1,8 +1,8 @@
 package com.app.smartscan.frontendScreens
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun StartPage(
     onAnswerQuestions: () -> Unit,
-    onSkinAnalyzer: () -> Unit
+    onSkinAnalyzer: () -> Unit,
+    onLoginClicked: () -> Unit // New parameter
 ) {
     Column(
         modifier = Modifier
@@ -29,19 +30,25 @@ fun StartPage(
             onClick = onAnswerQuestions,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Answer Questions")
+            Text("Answer Questions to Personalize")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = {
-                onSkinAnalyzer()
-            },
+            onClick = onSkinAnalyzer,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Skin Analyzer")
+            Text("Scan Skin to Analyze")
         }
 
+        Spacer(modifier = Modifier.weight(1f)) // Pushes login to the bottom
+
+        OutlinedButton(
+            onClick = onLoginClicked,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Returning User? Log In")
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.app.smartscan.data.*
+import com.app.smartscan.data.model.Product
 import com.app.smartscan.data.model.Scan
 import com.app.smartscan.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -162,6 +163,10 @@ class AuthViewModel(
         return scanRepository.observeScan(scanId)
     }
     
+    suspend fun getProduct(barcode: String): Product? {
+        return productRepository.getProduct(barcode)
+    }
+    
     fun onQuestionnaireSubmitted(skinType: String, isSensitive: Boolean, ageRange: String, allergies: List<String>) {
         viewModelScope.launch {
             try {
@@ -181,7 +186,8 @@ class AuthViewModel(
                 val existingProfile = userRepository.getUser(uid) ?: UserProfile()
                 val updatedProfile = existingProfile.copy(skinType = analysisResult)
                 userRepository.upsertUser(uid, updatedProfile)
-                _uiState.update { it.copy(message = "User profile updated with AI skin analysis.") }
+                // Corrected: Set the message to the actual analysis result
+                _uiState.update { it.copy(message = "AI Analysis Result: $analysisResult") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error saving skin analysis: ${e.message}") }
             }
@@ -210,6 +216,10 @@ class AuthViewModel(
                 _uiState.update { it.copy(message = "Error adding to blacklist: ${e.message}") }
             }
         }
+    }
+
+    fun clearMessage() {
+        _uiState.update { it.copy(message = "") }
     }
 
     companion object {

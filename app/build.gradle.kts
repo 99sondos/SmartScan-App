@@ -59,28 +59,36 @@ android {
     kotlinOptions { jvmTarget = "11" }
 
     buildTypes {
+        debug {
+            buildConfigField("Boolean", "USE_EMULATORS", "true")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("Boolean", "USE_EMULATORS", "false")
         }
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
 dependencies {
     // --- COMBINED DEPENDENCIES ---
 
-    // Firebase (using their BOM)
+    // Firebase (with explicit versions to fix the resolution error)
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx:23.2.1")
+    implementation("com.google.firebase:firebase-analytics-ktx:22.5.0")
+    implementation("com.google.firebase:firebase-firestore-ktx:25.1.4")
+    implementation("com.google.firebase:firebase-functions-ktx:21.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // AndroidX / Compose (using their BOM and standard notation)
+    // AndroidX / Compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
@@ -108,7 +116,6 @@ dependencies {
 
     // Networking (from our branch)
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
     // Testing (Combined)
     testImplementation("junit:junit:4.13.2")

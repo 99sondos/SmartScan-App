@@ -12,158 +12,119 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.smartscan.R
 
-// Main composable for showing all the questions one by one
 @Composable
 fun QuestionnaireScreen(
     skipFirstTwo: Boolean = false,
     cameFromAnalyzer: Boolean = false,
-    onFinish: (Boolean) -> Unit
-)
-{
-    val questions = listOf("skinType", "sensitive", "allergies", "ageRange")
+    onFinish: (Boolean, String, Boolean, String, List<String>) -> Unit
+) {
+    val questions = listOf("skinType", "sensitive", "ageRange", "allergies")
 
-    var currentIndex by remember {
-        mutableStateOf(if (skipFirstTwo) 2 else 0)
-    }
+    var currentIndex by remember { mutableStateOf(if (skipFirstTwo) 2 else 0) }
 
+    // State for all answers
+    var skinType by remember { mutableStateOf("") }
+    var isSensitive by remember { mutableStateOf(false) }
+    var ageRange by remember { mutableStateOf("") }
+    var allergies by remember { mutableStateOf<List<String>>(emptyList()) }
+    
     var answeredQuestions by remember { mutableStateOf(mutableSetOf<String>()) }
 
+    fun handleFinish() {
+        val allAnswered = answeredQuestions.size == questions.size
+        onFinish(allAnswered, skinType, isSensitive, ageRange, allergies)
+    }
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Progress bar
         LinearProgressIndicator(
             progress = (currentIndex + 1) / questions.size.toFloat(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .padding(bottom = 24.dp),
+            modifier = Modifier.fillMaxWidth().height(8.dp).padding(bottom = 24.dp),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
 
         when (questions[currentIndex]) {
-
-            // Skin type question
             "skinType" -> SkinTypeQuestion(
-                onAnswer = {
+                selectedType = skinType,
+                onAnswer = { selected ->
+                    skinType = selected
                     answeredQuestions.add("skinType")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
+                    if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish()
                 },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
+                onSkip = { if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish() }
             )
 
-            // Sensitive skin question
             "sensitive" -> SimpleQuestion(
                 question = "Is your skin sensitive?",
                 options = listOf("Yes", "No"),
-                onAnswer = {
+                selectedOption = if(isSensitive) "Yes" else "No",
+                onAnswer = { answer ->
+                    isSensitive = answer == "Yes"
                     answeredQuestions.add("sensitive")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
+                    if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish()
                 },
                 onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
+                onSkip = { if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish() }
             )
 
-            // Allergies question
-            "allergies" -> AllergyQuestion(
-                onNext = {
-                    answeredQuestions.add("allergies")
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        val allAnswered = answeredQuestions.size == questions.size
-                        onFinish(allAnswered)
-                    }
-                },
-                onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = {
-                    if (currentIndex < questions.lastIndex) currentIndex++ else {
-                        onFinish(false)
-                    }
-                }
-            )
-
-            // Age range question (last one)
             "ageRange" -> SimpleQuestion(
                 question = "Select your age range",
                 options = listOf("<18", "18–25", "26–40", "40+"),
-                onAnswer = {
+                selectedOption = ageRange,
+                onAnswer = { selected ->
+                    ageRange = selected
                     answeredQuestions.add("ageRange")
-                    val allAnswered = answeredQuestions.size == questions.size
-                    onFinish(allAnswered)
+                    if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish()
                 },
                 onBack = { if (currentIndex > 0) currentIndex-- },
-                onSkip = { onFinish(false) }
+                onSkip = { if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish() }
+            )
+            
+            "allergies" -> AllergyQuestion(
+                currentAllergies = allergies,
+                onNext = { list ->
+                    allergies = list
+                    answeredQuestions.add("allergies")
+                    if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish()
+                },
+                onBack = { if (currentIndex > 0) currentIndex-- },
+                onSkip = { if (currentIndex < questions.lastIndex) currentIndex++ else handleFinish() }
             )
         }
     }
 }
 
-// Skin type selection screen
 @Composable
 fun SkinTypeQuestion(
-    onAnswer: () -> Unit,
+    selectedType: String,
+    onAnswer: (String) -> Unit,
     onSkip: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Select your skin type",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
+            Text(text = "Select your skin type", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
 
-            val skinTypes = listOf(
-                "Dry" to R.drawable.cracked,
-                "Oily" to R.drawable.leaf_oily,
-                "Combination" to R.drawable.combo,
-                "Normal" to R.drawable.normal
-            )
+            val skinTypes = listOf("Dry" to R.drawable.cracked, "Oily" to R.drawable.leaf_oily, "Combination" to R.drawable.combo, "Normal" to R.drawable.normal)
 
             for (pair in skinTypes.chunked(2)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     for ((label, imageRes) in pair) {
                         ElevatedButton(
-                            onClick = onAnswer,
+                            onClick = { onAnswer(label) },
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .weight(1f)
-                                .height(140.dp)
+                            modifier = Modifier.padding(8.dp).weight(1f).height(140.dp),
+                            colors = ButtonDefaults.elevatedButtonColors(containerColor = if (selectedType == label) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Image(
-                                    painter = painterResource(id = imageRes),
-                                    contentDescription = label,
-                                    modifier = Modifier.size(64.dp)
-                                )
+                                Image(painter = painterResource(id = imageRes), contentDescription = label, modifier = Modifier.size(64.dp))
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(label)
                             }
@@ -172,193 +133,116 @@ fun SkinTypeQuestion(
                 }
             }
         }
-
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
+        TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            Text("Skip for now", color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f))
         }
     }
 }
 
-// Simple multiple-choice question
 @Composable
 fun SimpleQuestion(
     question: String,
     options: List<String>,
-    onAnswer: () -> Unit,
+    selectedOption: String,
+    onAnswer: (String) -> Unit,
     onBack: () -> Unit,
     onSkip: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) {
             Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
         }
-
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = question,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
+            Text(text = question, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(24.dp))
-
             options.forEach { option ->
                 OutlinedButton(
-                    onClick = onAnswer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
+                    onClick = { onAnswer(option) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedOption == option) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
                 ) {
                     Text(option)
                 }
             }
         }
-
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
+        TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            Text("Skip for now", color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f))
         }
     }
 }
 
-// Allergy question
 @Composable
 fun AllergyQuestion(
-    onNext: () -> Unit,
+    currentAllergies: List<String>,
+    onNext: (List<String>) -> Unit,
     onBack: () -> Unit,
     onSkip: () -> Unit
 ) {
-    var selectedOption by remember { mutableStateOf<String?>(null) }
+    var selectedOptions by remember { mutableStateOf(currentAllergies.toSet()) }
     var customAllergy by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-
-    val isValidAllergy = customAllergy.length >= 3 &&
-            customAllergy.all { it.isLetter() || it.isWhitespace() }
+    var otherSelected by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) {
             Text("⬅ Back", color = MaterialTheme.colorScheme.primary)
         }
-
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Any allergies?",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
+            Text(text = "Any allergies?", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(24.dp))
 
-            val options = listOf("Perfume", "Alcohol", "Other")
-
+            val options = listOf("Perfume", "Alcohol")
             options.forEach { option ->
                 OutlinedButton(
-                    onClick = {
-                        selectedOption = option
-                        showError = false
+                    onClick = { 
+                        selectedOptions = if (selectedOptions.contains(option)) selectedOptions - option else selectedOptions + option
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (selectedOption == option)
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        else
-                            MaterialTheme.colorScheme.surface
-                    )
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedOptions.contains(option)) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
                 ) {
                     Text(option)
                 }
             }
+            OutlinedButton(
+                onClick = { otherSelected = !otherSelected },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (otherSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+            ) {
+                Text("Other")
+            }
 
-            if (selectedOption == "Other") {
+            if (otherSelected) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = customAllergy,
-                    onValueChange = {
-                        customAllergy = it
-                        showError = false
-                    },
-                    label = { Text("Please specify your allergy") },
+                    onValueChange = { customAllergy = it },
+                    label = { Text("Please specify and press continue") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = !isValidAllergy && customAllergy.isNotBlank()
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                if (!isValidAllergy && customAllergy.isNotBlank()) {
-                    Text(
-                        text = "Please enter a valid allergy name (letters only, minimum 3 letters)",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = {
-                    if (selectedOption == "Other" && !isValidAllergy) {
-                        showError = true
-                    } else {
-                        onNext()
-                    }
-                },
-                enabled = selectedOption != null &&
-                        (selectedOption != "Other" || customAllergy.isNotBlank())
-            ) {
+            Button(onClick = { 
+                val finalList = selectedOptions.toMutableList()
+                if (otherSelected && customAllergy.isNotBlank()) {
+                    finalList.add(customAllergy)
+                }
+                onNext(finalList)
+            }) {
                 Text("Continue")
             }
         }
-
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Skip for now",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-            )
+        TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            Text("Skip for now", color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f))
         }
     }
 }

@@ -31,16 +31,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,7 +59,7 @@ class AiCameraActivity : ComponentActivity() {
         if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 0)
         }
-        val analysisType = intent.getStringExtra("analysis_type") ?: "ocr"
+        val analysisType = intent.getStringExtra("analysisType") ?: "product"
         setContent {
             CameraPreviewScreen(analysisType = analysisType)
         }
@@ -83,7 +77,7 @@ fun CameraPreviewScreen(analysisType: String) {
     val galleryLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             try {
-                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
                 capturedBitmap = bitmap
             } catch (e: Exception) {
                 Log.e("AiCamera", "Gallery load failed: ${e.message}", e)
@@ -96,9 +90,7 @@ fun CameraPreviewScreen(analysisType: String) {
         cameraProviderFuture.addListener({
             try {
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(context as ComponentActivity, cameraSelector, preview, imageCapture)
@@ -113,57 +105,61 @@ fun CameraPreviewScreen(analysisType: String) {
             AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
             Box(
                 modifier = Modifier.size(80.dp).align(Alignment.BottomCenter).padding(bottom = 32.dp).clip(CircleShape)
-                    .background(Color.DarkGray.copy(alpha = 0.2f)).border(3.dp, Color.White, CircleShape)
+                    .background(Color.White.copy(alpha = 0.5f)).border(2.dp, Color.White, CircleShape)
                     .clickable { captureImage(imageCapture, context) { bitmap -> capturedBitmap = bitmap } },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Default.Camera, contentDescription = "Capture", tint = Color.DarkGray, modifier = Modifier.size(36.dp))
+                Icon(imageVector = Icons.Default.Camera, contentDescription = "Capture", tint = Color.Black, modifier = Modifier.size(36.dp))
             }
             Icon(
-                imageVector = Icons.Default.Image, contentDescription = "Open Gallery", tint = Color.DarkGray,
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 32.dp).size(32.dp)
+                imageVector = Icons.Default.Image, contentDescription = "Open Gallery", tint = Color.White,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 48.dp).size(32.dp)
                     .clickable { galleryLauncher.launch("image/*") }
             )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            Image(bitmap = capturedBitmap!!.asImageBitmap(), contentDescription = "Captured Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Image(bitmap = capturedBitmap!!.asImageBitmap(), contentDescription = "Captured Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             Icon(
-                imageVector = Icons.Default.Refresh, contentDescription = "Retake", tint = Color.DarkGray,
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 32.dp).size(40.dp)
+                imageVector = Icons.Default.Refresh, contentDescription = "Retake", tint = Color.White,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 32.dp, bottom = 48.dp).size(40.dp)
                     .clickable { capturedBitmap = null }
             )
             Icon(
-                imageVector = Icons.Default.Check, contentDescription = "Use Image", tint = Color.DarkGray,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = 32.dp).size(40.dp)
+                imageVector = Icons.Default.Check, contentDescription = "Use Image", tint = Color.White,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = 48.dp).size(40.dp)
                     .clickable {
                         val bitmap = capturedBitmap ?: return@clickable
                         coroutineScope.launch {
                             try {
-                                val resultText = when (analysisType) {
-                                    "ocr" -> {
-                                        val ocr = OcrHelper(context)
-                                        val rawText = ocr.analyze(bitmap)
-                                        formatIngredientsSmart(rawText)
-                                    }
-                                    "barcode" -> {
-                                        val barcodeHelper = BarCodeHelper(context)
-                                        val result = barcodeHelper.decode(bitmap)
-                                        if (result.isNullOrBlank()) "No barcode detected." else result
-                                    }
+                                val resultIntent = Intent()
+                                when (analysisType) {
                                     "skin" -> {
-                                        analyzeSkinTypeFromBitmap(bitmap)
+                                        val skinResult = analyzeSkinTypeFromBitmap(bitmap)
+                                        resultIntent.putExtra("skinAnalysisResult", skinResult)
                                     }
-                                    else -> "Unknown analysis type: $analysisType"
-                                }
-                                val resultIntent = Intent().apply {
-                                    putExtra("analysis_type", analysisType)
-                                    putExtra("result_text", resultText)
+                                    "product" -> {
+                                        val barcodeHelper = BarCodeHelper(context)
+                                        val barcodeResult = barcodeHelper.decode(bitmap)
+                                        if (!barcodeResult.isNullOrBlank()) {
+                                            resultIntent.putExtra("barcode", barcodeResult)
+                                        } else {
+                                            val ocr = OcrHelper(context)
+                                            val rawText = ocr.analyze(bitmap)
+                                            val ocrResult = formatIngredientsSmart(rawText)
+                                            resultIntent.putExtra("ocrText", ocrResult)
+                                            Toast.makeText(context, "No barcode found, used OCR.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 }
                                 (context as Activity).setResult(Activity.RESULT_OK, resultIntent)
-                                (context as Activity).finish()
+                                context.finish()
                             } catch (e: Exception) {
                                 Log.e("AiCamera", "Analysis error: ${e.message}", e)
+                                Toast.makeText(context, "Analysis failed: ${e.message}", Toast.LENGTH_LONG).show()
+                                // Corrected: Explicitly set the result to CANCELED before finishing
+                                (context as Activity).setResult(Activity.RESULT_CANCELED)
+                                (context as Activity).finish()
                             }
                         }
                     }
