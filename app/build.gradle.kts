@@ -69,6 +69,9 @@ dependencies {
     // This is for Visibility / VisibilityOff icons CreateAccountScreen
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Coil for the image of the product to show in the result
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
 
     // Testing
     testImplementation(libs.junit)
