@@ -31,7 +31,7 @@ fun SplashScreen(navController: NavController) {
     // After a few seconds go to Questionnaire
     LaunchedEffect(Unit) {
         delay(4000) // 4 seconds splash duration
-        navController.navigate("questionnaire") {
+        navController.navigate("start") {
             popUpTo("splash") { inclusive = true } // remove splash from back stack
         }
     }
