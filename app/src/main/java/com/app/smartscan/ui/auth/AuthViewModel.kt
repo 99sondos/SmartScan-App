@@ -162,6 +162,11 @@ class AuthViewModel(
 
     fun onOcrScanClicked(ocrText: String) {
         viewModelScope.launch {
+            // Safeguard: Reject empty or meaningless OCR text
+            if (ocrText.length < 10) { 
+                _uiState.update { it.copy(message = "Error: No meaningful text found in image.", scanId = null) }
+                return@launch
+            }
             _uiState.update { it.copy(message = "Creating OCR scan...") }
             try {
                 val uid = authRepository.currentUser?.uid ?: throw Exception("User not signed in")
@@ -212,7 +217,6 @@ class AuthViewModel(
                 val existingProfile = userRepository.getUser(uid) ?: UserProfile()
                 val updatedProfile = existingProfile.copy(skinType = analysisResult)
                 userRepository.upsertUser(uid, updatedProfile)
-                // Corrected: Set the message to the actual analysis result
                 _uiState.update { it.copy(message = "AI Analysis Result: $analysisResult") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error saving skin analysis: ${e.message}") }
