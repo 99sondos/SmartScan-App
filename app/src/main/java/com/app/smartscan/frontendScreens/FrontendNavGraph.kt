@@ -20,50 +20,113 @@ fun FrontendNavGraph() {
             SplashScreen(navController)
         }
 
+
+        //  New StartPage route
+        composable("start") {
+            StartPage(
+                onAnswerQuestions = {
+                    navController.navigate("questionnaire?skipFirstTwo=false&cameFromAnalyzer=false")
+                },
+                onSkinAnalyzer = {
+                    navController.navigate("questionnaire?skipFirstTwo=true&cameFromAnalyzer=true")
+                }
+            )
+
+        }
+
+
+
+
         // 1. Questionnaire screen
-        composable("questionnaire") {
+        composable(
+            route = "questionnaire?skipFirstTwo={skipFirstTwo}&cameFromAnalyzer={cameFromAnalyzer}",
+            arguments = listOf(
+                navArgument("skipFirstTwo") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("cameFromAnalyzer") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { entry ->
+            val skip = entry.arguments?.getBoolean("skipFirstTwo") ?: false
+            val cameFromAnalyzer = entry.arguments?.getBoolean("cameFromAnalyzer") ?: false
+
             QuestionnaireScreen(
+                skipFirstTwo = skip,
+                cameFromAnalyzer = cameFromAnalyzer,
                 onFinish = { allAnswered ->
-                    // When questionnaire finished — go to Home with completed=true/false
-                    navController.navigate("home?completed=$allAnswered")
+                    navController.navigate("home?completed=$allAnswered&cameFromAnalyzer=$cameFromAnalyzer")
                 }
             )
         }
 
+
+
+
         // 2. Home screen — can receive a “completed” argument
         composable(
-            route = "home?completed={completed}",
+            route = "home?completed={completed}&cameFromAnalyzer={cameFromAnalyzer}",
             arguments = listOf(
                 navArgument("completed") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("cameFromAnalyzer") {
                     type = NavType.BoolType
                     defaultValue = false
                 }
             )
         ) { backStackEntry ->
-            val completed = backStackEntry.arguments
-                ?.getBoolean("completed")
-                ?: false
-
-            // Added debugging line here
-            Log.d("FrontendNavGraph", "Questionnaire completed: $completed")
+            val completed = backStackEntry.arguments?.getBoolean("completed") ?: false
+            val cameFromAnalyzer = backStackEntry.arguments?.getBoolean("cameFromAnalyzer") ?: false
 
             HomeScreen(
-                questionnaireCompleted = completed, // passes result to Home
+                questionnaireCompleted = completed,
+                cameFromAnalyzer = cameFromAnalyzer,   // ⬅️ viktigt!
                 onCreateAccount = { navController.navigate("createAccount") },
-                onScanProduct = { /* TODO: Add scan navigation later */ }
+                onScanProduct = { /* TODO */ },
+                onGoToProfile = { navController.navigate("profile") } // eller ta bort parametern helt
             )
         }
 
+
+
+        composable("profile") {
+            MyProfileScreen(
+                onScanProduct = {
+                    // TODO: scanner
+                },
+                onViewMyProducts = {
+                    navController.navigate("viewMyProducts")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("viewMyProducts") {
+            ViewMyProductsScreen(
+                favourites = emptyList(),
+                blacklist = emptyList(),
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
+
         // 3. Create Account screen
-        composable(route = "createAccount") {
+        composable("createAccount") {
             CreateAccountScreen(
                 onBack = { navController.popBackStack() },
                 onCreateAccount = {
-                    // TODO: Add logic for account creation or next screen
-                    // For now, just go back to Home after creating account
-                    navController.popBackStack()
+                    navController.navigate("profile") {
+                        popUpTo("home") { inclusive = false }
+                    }
                 }
             )
         }
+
     }
 }

@@ -16,12 +16,14 @@ import com.app.smartscan.R
 import androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun HomeScreen(
-    questionnaireCompleted: Boolean, // now receives real value
-    onCreateAccount: () -> Unit,   // Runs when "Create Account" is clicked
-    onScanProduct: () -> Unit      // Runs when "Scan Product" is clicked
+    questionnaireCompleted: Boolean,
+    cameFromAnalyzer: Boolean,      //  NY parameter
+    onCreateAccount: () -> Unit,
+    onScanProduct: () -> Unit,
+    onGoToProfile: () -> Unit       // DU HAR DET I NAVGRAPH SEN
 ) {
     // Simulated value (for now). Later, this should come from ViewModel or SharedPrefs.
-   // val questionnaireCompleted = remember { mutableStateOf(false) }
+    // val questionnaireCompleted = remember { mutableStateOf(false) }
 
     // Whole screen layout
     Column(
@@ -50,18 +52,18 @@ fun HomeScreen(
             // "Create Account" button (disabled until questionnaire is done)
             Button(
                 onClick = onCreateAccount,
-                enabled = questionnaireCompleted,
+                enabled = questionnaireCompleted || cameFromAnalyzer,   // ✅ ändrat här
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (questionnaireCompleted)
+                    containerColor = if (questionnaireCompleted || cameFromAnalyzer)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.surfaceVariant
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
                 modifier = Modifier
-                    .fillMaxWidth(0.65f) // ⬅ narrower, centered buttons
-                    .height(64.dp)       // ⬆ taller for better look & feel
+                    .fillMaxWidth(0.65f)
+                    .height(64.dp)
             ) {
                 Text(
                     "Create Account",
@@ -70,8 +72,9 @@ fun HomeScreen(
                 )
             }
 
+
             // Message if questionnaire not completed
-            if (!questionnaireCompleted) {
+            if (!questionnaireCompleted && !cameFromAnalyzer) {
                 Text(
                     text = "Complete the questionnaire to create an account.",
                     color = MaterialTheme.colorScheme.error,
@@ -80,6 +83,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
+
 
             // "Scan Product" button (always enabled)
             OutlinedButton(
@@ -120,7 +124,9 @@ fun HomeScreenPreview() {
         HomeScreen(
             onCreateAccount = {},
             questionnaireCompleted = false, // change to true
-            onScanProduct = {}
+            cameFromAnalyzer = false,
+            onScanProduct = {},
+            onGoToProfile = {}
         )
     }
 }

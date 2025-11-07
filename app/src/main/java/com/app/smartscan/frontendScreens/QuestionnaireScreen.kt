@@ -15,11 +15,17 @@ import com.app.smartscan.R
 // Main composable for showing all the questions one by one
 @Composable
 fun QuestionnaireScreen(
-    onFinish: (Boolean) -> Unit   // true = all answered, false = skipped any
-) {
+    skipFirstTwo: Boolean = false,
+    cameFromAnalyzer: Boolean = false,
+    onFinish: (Boolean) -> Unit
+)
+{
     val questions = listOf("skinType", "sensitive", "allergies", "ageRange")
 
-    var currentIndex by remember { mutableStateOf(0) }
+    var currentIndex by remember {
+        mutableStateOf(if (skipFirstTwo) 2 else 0)
+    }
+
     var answeredQuestions by remember { mutableStateOf(mutableSetOf<String>()) }
 
     Column(
